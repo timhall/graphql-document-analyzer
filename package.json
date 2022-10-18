@@ -1,0 +1,33 @@
+{
+  "name": "graphql-document-analyzer",
+  "version": "0.0.0",
+  "description": "Resilient analyzing and printing of GraphQL documents",
+  "keywords": [
+    "graphql",
+    "document",
+    "analyze",
+    "parse",
+    "print",
+    "visit",
+    "resilient"
+  ],
+  "author": "Tim Hall <tim@timhall.dev>",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "prepublishOnly": "pnpm build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@tsconfig/node12": "^1.0.11",
+    "graphql": "^16.6.0",
+    "tsup": "^6.3.0",
+    "typescript": "^4.8.4"
+  },
+  "peerDependencies": {
+    "graphql": "^16"
+  }
+}
