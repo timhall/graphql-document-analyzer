@@ -1,5 +1,7 @@
+import { OperationDefinitionNode } from "graphql";
 import { test, expect } from "vitest";
 import { analyze } from "../analyze";
+import { CommentNode } from "../extended-ast";
 
 test("should parse comment sections", () => {
   const document = analyze(`
@@ -12,7 +14,7 @@ test("should parse comment sections", () => {
 
   expect(document.definitions.length).toBe(0);
   expect(document.sections.length).toBe(3);
-  expect(document.sections[1].value).toEqual("# B");
+  expect((document.sections[1] as CommentNode).value).toEqual("# B");
 });
 
 test("should parse operations", () => {
@@ -52,7 +54,9 @@ query C {
   expect(document.definitions.length).toBe(1);
   expect(document.sections.length).toBe(3);
   expect(document.definitions[0].kind).toEqual("OperationDefinition");
-  expect(document.definitions[0].name?.value).toEqual("B");
+  expect(
+    (document.definitions[0] as OperationDefinitionNode).name?.value
+  ).toEqual("B");
 });
 
 test("should combine multi-line comments", () => {
@@ -63,5 +67,20 @@ test("should combine multi-line comments", () => {
   `);
 
   expect(document.sections.length).toBe(1);
-  expect(document.sections[0].value).toEqual("# A\n# B\n# C");
+  expect((document.sections[0] as CommentNode).value).toEqual("# A\n# B\n# C");
+});
+
+test("should parse empty selection sets", () => {
+  const document = analyze(`
+query A {
+  a {
+
+  }
+}
+  `);
+
+  expect(document.definitions.length).toBe(1);
+  expect(
+    (document.definitions[0] as OperationDefinitionNode).name?.value
+  ).toEqual("A");
 });

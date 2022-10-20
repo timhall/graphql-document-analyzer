@@ -1,20 +1,21 @@
-import {
+import { Kind, Location, Source, Token, TokenKind } from "graphql";
+import type {
   DefinitionNode,
   FragmentDefinitionNode,
-  Kind,
-  Location,
   OperationDefinitionNode,
-  parse as graphqlParse,
-  Source,
-  Token,
-  TokenKind,
+  ParseOptions,
+  SelectionSetNode,
 } from "graphql";
-import { ExtendedDocumentNode, InvalidNode, SectionNode } from "./extended-ast";
+import { Parser } from "graphql/language/parser";
+import { ExtendedDocumentNode, SectionNode } from "./extended-ast";
 import { replaceInArray } from "./lib/replace-in-array";
 import { splitLines } from "./lib/split-lines";
 
-export function analyze(source: string): ExtendedDocumentNode {
-  const sections = parseSections(source);
+export function analyze(
+  source: string,
+  options?: ParseOptions
+): ExtendedDocumentNode {
+  const sections = parseSections(source, options);
   const definitions = sections.filter(isExecutableDefinition);
 
   return { kind: Kind.DOCUMENT, definitions, sections };
@@ -69,7 +70,10 @@ const COMMENT = /^\s*#/;
  * 1. Operations and fragments are on separate lines
  * 2. Whitespace is significant, so "{" denotes the start of an operation and "}" the close
  */
-function parseSections(source: string | Source): SectionNode[] {
+function parseSections(
+  source: string | Source,
+  options?: ParseOptions
+): SectionNode[] {
   source = typeof source === "string" ? new Source(source) : source;
 
   const lines = splitLines(source).filter((line) => line.value !== "");
@@ -81,7 +85,7 @@ function parseSections(source: string | Source): SectionNode[] {
       const loc = new Location(open, line, source);
       const value = source.body.substring(loc.start, loc.end);
 
-      const definition = tryParseDefinition(source, loc);
+      const definition = tryParseDefinition(source, loc, options);
       sections.push(definition ?? { kind: "Invalid", value, loc });
 
       open = undefined;
@@ -129,9 +133,28 @@ function parseSections(source: string | Source): SectionNode[] {
   return sections;
 }
 
+class ResilientParser extends Parser {
+  // Generally, selection set requires non-empty selections
+  // relax this requirement to allow for readable documents (even if invalid)
+  parseSelectionSet(): SelectionSetNode {
+    // This inverts the do-while loop in many() to allow for empty-many
+    this.expectToken(TokenKind.BRACE_L);
+    const selections = [];
+    while (!this.expectOptionalToken(TokenKind.BRACE_R)) {
+      selections.push(this.parseSelection());
+    }
+
+    return this.node<SelectionSetNode>(this._lexer.token, {
+      kind: Kind.SELECTION_SET,
+      selections,
+    });
+  }
+}
+
 function tryParseDefinition(
   source: string | Source,
-  location: Location
+  location: Location,
+  options: ParseOptions = {}
 ): DefinitionNode | undefined {
   source = typeof source === "string" ? new Source(source) : source;
 
@@ -143,7 +166,8 @@ function tryParseDefinition(
       .padStart(location.end + 1)
       .padEnd(source.body.length);
 
-    const document = graphqlParse(isolated);
+    const parser = new ResilientParser(isolated, options);
+    const document = parser.parseDocument();
     const definition = document.definitions[0];
 
     // Make sure it's an ExecutableDefinition (OperationNode or FragmentNode)

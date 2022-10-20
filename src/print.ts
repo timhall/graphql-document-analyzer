@@ -1,12 +1,93 @@
-import { ASTNode, print as graphqlPrint } from "graphql";
+import {
+  ASTNode,
+  DefinitionNode,
+  DocumentNode,
+  FieldNode,
+  Kind,
+  OperationDefinitionNode,
+  print as graphqlPrint,
+  SelectionNode,
+  SelectionSetNode,
+  visit,
+} from "graphql";
 import type { ExtendedDocumentNode } from "./extended-ast";
 import { isExtendedDocumentNode } from "./extended-ast";
+import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 
 export function print(ast: ASTNode | ExtendedDocumentNode): string {
   if (!isExtendedDocumentNode(ast)) {
     return graphqlPrint(ast);
   }
 
-  // TODO
-  return "";
+  const output = [];
+  for (const section of ast.sections) {
+    if (section.kind === "Comment" || section.kind === "Invalid") {
+      output.push(section.value);
+      continue;
+    }
+
+    output.push(resilientPrint(section));
+  }
+
+  return output.join("\n\n");
+}
+
+const TEMPORARY_FIELD: FieldNode = {
+  kind: Kind.FIELD,
+  name: { kind: Kind.NAME, value: "TEMPORARY_FIELD" },
+};
+
+/**
+ * GraphQL's `print` method with some heuristics for dealing with invalid nodes
+ *
+ * 1. For empty inline fragments, add a temporary node so that the document is valid
+ *    (and then remove that node from the output)
+ * 2. For empty operation selections, add a temporary node so that the braces are retained
+ *    (and then remove that node from the output)
+ */
+function resilientPrint(definition: DefinitionNode): string {
+  const document: DocumentNode = {
+    kind: Kind.DOCUMENT,
+    definitions: [definition],
+  };
+  const temporaryDocument = visit(document, {
+    OperationDefinition(node) {
+      if (node.selectionSet.selections.length > 0) return;
+
+      return {
+        ...node,
+        selectionSet: {
+          kind: Kind.SELECTION_SET,
+          selections: [TEMPORARY_FIELD],
+        },
+      };
+    },
+    Field(node) {
+      if (node.selectionSet?.selections.length !== 0) return;
+
+      return {
+        ...node,
+        selectionSet: {
+          kind: Kind.SELECTION_SET,
+          selections: [TEMPORARY_FIELD],
+        },
+      };
+    },
+    InlineFragment(node) {
+      if (node.selectionSet.selections.length > 0) return;
+
+      return {
+        ...node,
+        selectionSet: {
+          kind: Kind.SELECTION_SET,
+          selections: [TEMPORARY_FIELD],
+        },
+      };
+    },
+  });
+
+  const valid = graphqlPrint(temporaryDocument);
+  const value = trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""));
+
+  return value;
 }
