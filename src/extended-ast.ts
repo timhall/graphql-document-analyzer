@@ -7,7 +7,7 @@ export type ExtendedASTNode =
   | InvalidNode;
 
 export interface ExtendedDocumentNode extends DocumentNode {
-  readonly sections: ReadonlyArray<DefinitionNode | CommentNode | InvalidNode>;
+  readonly sections: ReadonlyArray<SectionNode>;
 }
 
 export function isExtendedDocumentNode(
@@ -16,6 +16,8 @@ export function isExtendedDocumentNode(
   return node.kind === "Document" && "sections" in node;
 }
 
+export type SectionNode = DefinitionNode | CommentNode | InvalidNode;
+
 export interface CommentNode {
   readonly kind: "Comment";
   readonly loc?: Location | undefined;
@@ -23,7 +25,7 @@ export interface CommentNode {
 }
 
 export interface InvalidNode {
-  readonly kind: "Unknown";
+  readonly kind: "Invalid";
   readonly loc?: Location | undefined;
   readonly value: string;
 }
