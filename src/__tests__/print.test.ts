@@ -12,7 +12,7 @@ test("should print DocumentNode", () => {
   expect(print(document)).toEqual(source);
 });
 
-test("should print valid analyzed document", () => {
+test("should print valid ExtendedDocumentNode", () => {
   const source = `query A {
   a
 }`;

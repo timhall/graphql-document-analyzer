@@ -4,10 +4,7 @@ import {
   DocumentNode,
   FieldNode,
   Kind,
-  OperationDefinitionNode,
   print as graphqlPrint,
-  SelectionNode,
-  SelectionSetNode,
   visit,
 } from "graphql";
 import type { ExtendedDocumentNode } from "./extended-ast";
@@ -21,7 +18,11 @@ export function print(ast: ASTNode | ExtendedDocumentNode): string {
 
   const output = [];
   for (const section of ast.sections) {
-    if (section.kind === "Comment" || section.kind === "Invalid") {
+    if (
+      section.kind === "Ignored" ||
+      section.kind === "InvalidOperationDefinition" ||
+      section.kind === "InvalidFragmentDefinition"
+    ) {
       output.push(section.value);
       continue;
     }
@@ -29,7 +30,7 @@ export function print(ast: ASTNode | ExtendedDocumentNode): string {
     output.push(resilientPrint(section));
   }
 
-  return output.join("\n\n");
+  return output.join("\n");
 }
 
 const TEMPORARY_FIELD: FieldNode = {

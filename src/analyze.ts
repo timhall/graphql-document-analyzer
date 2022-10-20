@@ -1,13 +1,21 @@
-import { Kind, Location, Source, Token, TokenKind } from "graphql";
-import type {
+import {
   DefinitionNode,
   FragmentDefinitionNode,
+  NameNode,
   OperationDefinitionNode,
+  OperationTypeNode,
   ParseOptions,
   SelectionSetNode,
 } from "graphql";
+import { Kind, Location, Source, Token, TokenKind } from "graphql";
 import { Parser } from "graphql/language/parser";
-import { ExtendedDocumentNode, SectionNode } from "./extended-ast";
+import {
+  ExtendedDocumentNode,
+  IgnoredNode,
+  InvalidFragmentDefinitionNode,
+  InvalidOperationDefinitionNode,
+  SectionNode,
+} from "./extended-ast";
 import { replaceInArray } from "./lib/replace-in-array";
 import { splitLines } from "./lib/split-lines";
 
@@ -21,9 +29,34 @@ export function analyze(
   return { kind: Kind.DOCUMENT, definitions, sections };
 }
 
-const OPEN = /^(query\s*|mutation\s*|subscription\s*|fragment\s*)?(\w+\s*)?{/;
+const OPEN_OPERATION = /^(query\s*|mutation\s*|subscription\s*)?(\w+\s*)?{/;
+const OPEN_FRAGMENT = /^(fragment\s+)(\w+\s*){/;
 const CLOSE = /^}/;
-const COMMENT = /^\s*#/;
+
+function isOperation(
+  line: string
+): Pick<InvalidOperationDefinitionNode, "operation" | "name"> | false {
+  const match = line.match(OPEN_OPERATION);
+  if (match == null) return false;
+
+  const operation = (match[1] ? match[1].trim() : "query") as OperationTypeNode;
+  const name: NameNode | undefined = match[2]
+    ? { kind: Kind.NAME, value: match[2].trim() }
+    : undefined;
+
+  return { operation, name };
+}
+
+function isFragment(
+  line: string
+): Pick<InvalidFragmentDefinitionNode, "name"> | false {
+  const match = line.match(OPEN_FRAGMENT);
+  if (match == null) return false;
+
+  const name: NameNode = { kind: Kind.NAME, value: match[2].trim() };
+
+  return { name };
+}
 
 /**
  * The GraphQL parser isn't resilient to invalid documents,
@@ -76,59 +109,72 @@ function parseSections(
 ): SectionNode[] {
   source = typeof source === "string" ? new Source(source) : source;
 
-  const lines = splitLines(source).filter((line) => line.value !== "");
-
+  const lines = splitLines(source);
   const sections: SectionNode[] = [];
+
   let open: Token | undefined;
+  let openNode:
+    | Omit<InvalidOperationDefinitionNode, "loc" | "value">
+    | Omit<InvalidFragmentDefinitionNode, "loc" | "value">
+    | undefined;
+  let ignored: Token[] = [];
+
+  const writeIgnored = () => {
+    if (!ignored.length) return;
+
+    const startToken = ignored[0];
+    const endToken = ignored[ignored.length - 1];
+    const loc = new Location(startToken, endToken, source as Source);
+
+    const section: IgnoredNode = {
+      kind: "Ignored",
+      value: (source as Source).body.substring(loc.start, loc.end),
+      loc,
+    };
+    sections.push(section);
+
+    ignored = [];
+  };
+
   for (const line of lines) {
-    if (open && CLOSE.test(line.value)) {
+    if (open && openNode && CLOSE.test(line.value)) {
       const loc = new Location(open, line, source);
       const value = source.body.substring(loc.start, loc.end);
 
       const definition = tryParseDefinition(source, loc, options);
-      sections.push(definition ?? { kind: "Invalid", value, loc });
+      sections.push(definition ?? { ...openNode, value, loc });
 
       open = undefined;
+      openNode = undefined;
       continue;
     }
 
-    if (OPEN.test(line.value) && !open) {
+    let operation = isOperation(line.value);
+    if (operation && !open) {
+      writeIgnored();
+
       open = line;
+      openNode = { kind: "InvalidOperationDefinition", ...operation };
+
       continue;
     }
 
-    if (COMMENT.test(line.value) && !open) {
-      const endToken = new Token(
-        TokenKind.EOF,
-        line.end,
-        line.end,
-        line.line,
-        line.column
-      );
-      const loc = new Location(line, endToken, source);
+    let fragment = isFragment(line.value);
+    if (fragment && !open) {
+      writeIgnored();
 
-      // Combine "multi-line" comments together
-      // with assumption that printing combines sections with blank line separating
-      const previousSection = sections[sections.length - 1];
-      const isMultiline =
-        previousSection?.kind === "Comment" &&
-        previousSection?.loc?.end === line.start - 1;
+      open = line;
+      openNode = { kind: "InvalidFragmentDefinition", ...fragment };
 
-      if (isMultiline) {
-        replaceInArray(sections, previousSection, {
-          kind: "Comment",
-          value: `${previousSection.value}\n${line.value}`,
-          loc: new Location(
-            previousSection.loc?.startToken,
-            loc.endToken,
-            source
-          ),
-        });
-      } else {
-        sections.push({ kind: "Comment", value: line.value, loc });
-      }
+      continue;
+    }
+
+    if (!open) {
+      ignored.push(line);
     }
   }
+
+  writeIgnored();
 
   return sections;
 }
