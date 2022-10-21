@@ -3,22 +3,13 @@ import { test, expect } from "vitest";
 import { parse } from "graphql";
 import { analyze } from "../analyze";
 
-test("should print DocumentNode", () => {
-  const source = `query A {
-  a
-}`;
-  const document = parse(source);
-
-  expect(print(document)).toEqual(source);
-});
-
 test("should print valid ExtendedDocumentNode", () => {
   const source = `query A {
   a
 }`;
   const document = analyze(source);
 
-  expect(print(document)).toEqual(source);
+  expect(print(document)).toEqual(`${source}\n`);
 });
 
 test("should print comments and invalid", () => {
@@ -37,7 +28,7 @@ query B {
 # C`;
   const document = analyze(source);
 
-  expect(print(document)).toEqual(source);
+  expect(print(document)).toEqual(`${source}\n`);
 });
 
 test("should print invalid, but readable documents", () => {
@@ -55,5 +46,5 @@ query B {
 }`;
   const document = analyze(source);
 
-  expect(print(document)).toEqual(source);
+  expect(print(document)).toEqual(`${source}\n`);
 });

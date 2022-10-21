@@ -9,6 +9,10 @@ import {
 } from "graphql";
 import type { ExtendedDocumentNode } from "./extended-ast";
 import { isExtendedDocumentNode } from "./extended-ast";
+import {
+  ensureTrailingNewline,
+  trimTrailingNewlines,
+} from "./lib/trailing-newline";
 import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 
 export function print(ast: ASTNode | ExtendedDocumentNode): string {
@@ -30,7 +34,7 @@ export function print(ast: ASTNode | ExtendedDocumentNode): string {
     output.push(resilientPrint(section));
   }
 
-  return output.join("\n");
+  return ensureTrailingNewline(output.join("\n"));
 }
 
 const TEMPORARY_FIELD: FieldNode = {
@@ -88,7 +92,9 @@ function resilientPrint(definition: DefinitionNode): string {
   });
 
   const valid = graphqlPrint(temporaryDocument);
-  const value = trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""));
+  const value = trimTrailingNewlines(
+    trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""))
+  );
 
   return value;
 }

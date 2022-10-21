@@ -120,7 +120,7 @@ function parseSections(
   };
 
   for (const line of lines) {
-    if (open && TOP_LEVEL_CLOSE.test(line.value)) {
+    if (open && line.value && TOP_LEVEL_CLOSE.test(line.value)) {
       // Top-level close for open operation or fragment
       writeSection(open.node, open.token, line);
 
@@ -128,11 +128,11 @@ function parseSections(
       continue;
     }
 
-    let operation = isOperation(line.value);
+    let operation = line.value ? isOperation(line.value) : false;
     if (operation && !open) {
       writeIgnored();
 
-      if (CLOSE.test(line.value)) {
+      if (line.value && CLOSE.test(line.value)) {
         // Single-line operation
         writeSection(
           { kind: "InvalidOperationDefinition", ...operation },
@@ -150,11 +150,11 @@ function parseSections(
       continue;
     }
 
-    let fragment = isFragment(line.value);
+    let fragment = line.value ? isFragment(line.value) : false;
     if (fragment && !open) {
       writeIgnored();
 
-      if (CLOSE.test(line.value)) {
+      if (line.value && CLOSE.test(line.value)) {
         // Single-line fragment
         writeSection(
           { kind: "InvalidFragmentDefinition", ...fragment },
@@ -182,6 +182,22 @@ function parseSections(
   return sections;
 }
 
+interface GraphQL15Parser {
+  loc(start: Token): Location;
+}
+
+function isGraphQL15Parser(parser: unknown): parser is GraphQL15Parser {
+  return !!parser && typeof parser === "object" && "loc" in parser;
+}
+
+interface GraphQL16Parser {
+  node<TNode>(start: Token, node: TNode): TNode;
+}
+
+function isGraphQL16Parser(parser: unknown): parser is GraphQL16Parser {
+  return !!parser && typeof parser === "object" && "node" in parser;
+}
+
 class ResilientParser extends Parser {
   // Generally, selection set requires non-empty selections
   // relax this requirement to allow for readable documents (even if invalid)
@@ -193,10 +209,22 @@ class ResilientParser extends Parser {
       selections.push(this.parseSelection());
     }
 
-    return this.node<SelectionSetNode>(this._lexer.token, {
-      kind: Kind.SELECTION_SET,
-      selections,
-    });
+    if (isGraphQL15Parser(this)) {
+      return {
+        kind: Kind.SELECTION_SET,
+        selections,
+        loc: this.loc(this._lexer.token),
+      };
+    } else if (isGraphQL16Parser(this)) {
+      return this.node<SelectionSetNode>(this._lexer.token, {
+        kind: Kind.SELECTION_SET,
+        selections,
+      });
+    } else {
+      throw new Error(
+        `Unsupported GraphQL version, node and loc methods are missing on Parser`
+      );
+    }
   }
 }
 

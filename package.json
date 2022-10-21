@@ -17,6 +17,7 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "build": "tsup src/index.ts --dts --format esm,cjs",
     "prepublishOnly": "pnpm build",
     "test": "vitest"
@@ -30,7 +31,7 @@
     "vitest": "^0.24.3"
   },
   "peerDependencies": {
-    "graphql": "^16"
+    "graphql": "^15 | ^16"
   },
   "files": [
     "dist"
