@@ -3,6 +3,7 @@ import type {
   DefinitionNode,
   DocumentNode,
   Location,
+  NamedTypeNode,
   NameNode,
   OperationTypeNode,
 } from "graphql";
@@ -42,6 +43,7 @@ export interface InvalidFragmentDefinitionNode {
   readonly kind: "InvalidFragmentDefinition";
   readonly loc?: Location | undefined;
   readonly name: NameNode;
+  readonly typeCondition: NamedTypeNode;
   readonly value: string;
 }
 

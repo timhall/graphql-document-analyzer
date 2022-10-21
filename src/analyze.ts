@@ -1,22 +1,25 @@
 import {
+  ASTNode,
   DefinitionNode,
-  FragmentDefinitionNode,
+  isExecutableDefinitionNode,
+  Kind,
+  Location,
+  NamedTypeNode,
   NameNode,
-  OperationDefinitionNode,
   OperationTypeNode,
   ParseOptions,
   SelectionSetNode,
+  Source,
+  Token,
+  TokenKind,
 } from "graphql";
-import { Kind, Location, Source, Token, TokenKind } from "graphql";
 import { Parser } from "graphql/language/parser";
 import {
   ExtendedDocumentNode,
-  IgnoredNode,
   InvalidFragmentDefinitionNode,
   InvalidOperationDefinitionNode,
   SectionNode,
 } from "./extended-ast";
-import { replaceInArray } from "./lib/replace-in-array";
 import { splitLines } from "./lib/split-lines";
 
 export function analyze(
@@ -24,39 +27,19 @@ export function analyze(
   options?: ParseOptions
 ): ExtendedDocumentNode {
   const sections = parseSections(source, options);
-  const definitions = sections.filter(isExecutableDefinition);
+  const definitions = (sections as ASTNode[]).filter(
+    isExecutableDefinitionNode
+  );
 
   return { kind: Kind.DOCUMENT, definitions, sections };
 }
 
-const OPEN_OPERATION = /^(query\s*|mutation\s*|subscription\s*)?(\w+\s*)?{/;
-const OPEN_FRAGMENT = /^(fragment\s+)(\w+\s*){/;
-const CLOSE = /^}/;
+type SectionNodePart =
+  | Omit<InvalidOperationDefinitionNode, "loc" | "value">
+  | Omit<InvalidFragmentDefinitionNode, "loc" | "value">;
 
-function isOperation(
-  line: string
-): Pick<InvalidOperationDefinitionNode, "operation" | "name"> | false {
-  const match = line.match(OPEN_OPERATION);
-  if (match == null) return false;
-
-  const operation = (match[1] ? match[1].trim() : "query") as OperationTypeNode;
-  const name: NameNode | undefined = match[2]
-    ? { kind: Kind.NAME, value: match[2].trim() }
-    : undefined;
-
-  return { operation, name };
-}
-
-function isFragment(
-  line: string
-): Pick<InvalidFragmentDefinitionNode, "name"> | false {
-  const match = line.match(OPEN_FRAGMENT);
-  if (match == null) return false;
-
-  const name: NameNode = { kind: Kind.NAME, value: match[2].trim() };
-
-  return { name };
-}
+const TOP_LEVEL_CLOSE = /^}/;
+const CLOSE = /}\s*$/;
 
 /**
  * The GraphQL parser isn't resilient to invalid documents,
@@ -112,11 +95,7 @@ function parseSections(
   const lines = splitLines(source);
   const sections: SectionNode[] = [];
 
-  let open: Token | undefined;
-  let openNode:
-    | Omit<InvalidOperationDefinitionNode, "loc" | "value">
-    | Omit<InvalidFragmentDefinitionNode, "loc" | "value">
-    | undefined;
+  let open: { token: Token; node: SectionNodePart } | undefined;
   let ignored: Token[] = [];
 
   const writeIgnored = () => {
@@ -125,27 +104,27 @@ function parseSections(
     const startToken = ignored[0];
     const endToken = ignored[ignored.length - 1];
     const loc = new Location(startToken, endToken, source as Source);
+    const value = (source as Source).body.substring(loc.start, loc.end);
 
-    const section: IgnoredNode = {
-      kind: "Ignored",
-      value: (source as Source).body.substring(loc.start, loc.end),
-      loc,
-    };
-    sections.push(section);
+    sections.push({ kind: "Ignored", value, loc });
 
     ignored = [];
   };
 
-  for (const line of lines) {
-    if (open && openNode && CLOSE.test(line.value)) {
-      const loc = new Location(open, line, source);
-      const value = source.body.substring(loc.start, loc.end);
+  const writeSection = (node: SectionNodePart, open: Token, close: Token) => {
+    const loc = new Location(open, close, source as Source);
+    const value = (source as Source).body.substring(loc.start, loc.end);
 
-      const definition = tryParseDefinition(source, loc, options);
-      sections.push(definition ?? { ...openNode, value, loc });
+    const definition = tryParseDefinition(source, loc, options);
+    sections.push(definition ?? { ...node, value, loc });
+  };
+
+  for (const line of lines) {
+    if (open && TOP_LEVEL_CLOSE.test(line.value)) {
+      // Top-level close for open operation or fragment
+      writeSection(open.node, open.token, line);
 
       open = undefined;
-      openNode = undefined;
       continue;
     }
 
@@ -153,8 +132,20 @@ function parseSections(
     if (operation && !open) {
       writeIgnored();
 
-      open = line;
-      openNode = { kind: "InvalidOperationDefinition", ...operation };
+      if (CLOSE.test(line.value)) {
+        // Single-line operation
+        writeSection(
+          { kind: "InvalidOperationDefinition", ...operation },
+          line,
+          line
+        );
+      } else {
+        // Multi-line operation
+        open = {
+          token: line,
+          node: { kind: "InvalidOperationDefinition", ...operation },
+        };
+      }
 
       continue;
     }
@@ -163,8 +154,20 @@ function parseSections(
     if (fragment && !open) {
       writeIgnored();
 
-      open = line;
-      openNode = { kind: "InvalidFragmentDefinition", ...fragment };
+      if (CLOSE.test(line.value)) {
+        // Single-line fragment
+        writeSection(
+          { kind: "InvalidFragmentDefinition", ...fragment },
+          line,
+          line
+        );
+      } else {
+        // Multi-line fragment
+        open = {
+          token: line,
+          node: { kind: "InvalidFragmentDefinition", ...fragment },
+        };
+      }
 
       continue;
     }
@@ -217,7 +220,7 @@ function tryParseDefinition(
     const definition = document.definitions[0];
 
     // Make sure it's an ExecutableDefinition (OperationNode or FragmentNode)
-    if (!isExecutableDefinition(definition)) {
+    if (!isExecutableDefinitionNode(definition)) {
       return undefined;
     }
 
@@ -227,11 +230,34 @@ function tryParseDefinition(
   }
 }
 
-function isExecutableDefinition(
-  section: SectionNode
-): section is OperationDefinitionNode | FragmentDefinitionNode {
-  return (
-    section.kind === Kind.OPERATION_DEFINITION ||
-    section.kind === Kind.FRAGMENT_DEFINITION
-  );
+const OPEN_OPERATION = /^(query\s*|mutation\s*|subscription\s*)?(\w+\s*)?{/;
+const OPEN_FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
+
+function isOperation(
+  line: string
+): Pick<InvalidOperationDefinitionNode, "operation" | "name"> | false {
+  const match = line.match(OPEN_OPERATION);
+  if (match == null) return false;
+
+  const operation = (match[1] ? match[1].trim() : "query") as OperationTypeNode;
+  const name: NameNode | undefined = match[2]
+    ? { kind: Kind.NAME, value: match[2].trim() }
+    : undefined;
+
+  return { operation, name };
+}
+
+function isFragment(
+  line: string
+): Pick<InvalidFragmentDefinitionNode, "name" | "typeCondition"> | false {
+  const match = line.match(OPEN_FRAGMENT);
+  if (match == null) return false;
+
+  const name: NameNode = { kind: Kind.NAME, value: match[1] };
+  const typeCondition: NamedTypeNode = {
+    kind: Kind.NAMED_TYPE,
+    name: { kind: Kind.NAME, value: match[2] },
+  };
+
+  return { name, typeCondition };
 }

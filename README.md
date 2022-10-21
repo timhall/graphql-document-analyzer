@@ -3,8 +3,8 @@
 The GraphQL document analyzer is a resilient parser that intelligently handles
 a variety of issues when working with GraphQL documents, including:
 
-1. Validation issues don't throw errors and are stored as `Invalid` nodes
-2. Top-level comments are stored as `Comment` nodes and maintained through to the printed output
+1. Validation issues don't throw errors and are stored as `InvalidOperationDefinition` and `InvalidFragmentDefinition` nodes
+2. Top-level comments and other ignored values are stored as `Ignored` nodes and maintained through to the printed output
 3. Previous revisions can be used to interpolate valid nodes
 
 ## `analyze`
@@ -14,7 +14,7 @@ all valid, invalid, and comment sections of the document. Additionally, `definit
 if the document has no valid definitions (instead of throwing an error).
 
 ```ts
-import { analyze, interpolate } from "graphql-document-analyzer";
+import { analyze } from "graphql-document-analyzer";
 
 const source = `# Notes about A
 query A {
@@ -30,11 +30,11 @@ expect(document).toEqual({
   // Extension of DocumentNode with sections
   sections: [
     {
-      kind: "Comment",
+      kind: "Ignored",
       value: "# Notes about A",
     },
     {
-      kind: "Invalid",
+      kind: "InvalidOperationDefinition",
       value: "query A {\n  b {\n}",
     },
   ],
@@ -86,7 +86,7 @@ expect(approximate).toEqual({
   ],
   sections: [
     {
-      kind: 'Comment',
+      kind: 'Ignored',
       value: '# Notes about A'
     },
     {
@@ -94,31 +94,6 @@ expect(approximate).toEqual({
       // same as above...
     }
   ]
-});
-```
-
-## `visit`
-
-Use `visit` to handle the `Comment` and `Invalid` nodes in `sections`, otherwise GraphQL's built-in `visit` is sufficient.
-
-```ts
-import { analyze, visit } from "graphql-document-analyzer";
-
-const document = analyze(`# Notes about A
-query A {
-  b {
-}`);
-
-const cleanedUp = visit(document, {
-  Comment(node) {
-    //
-  },
-  Invalid(node) {
-    // Explicitly remove with `null`
-    return null;
-  },
-
-  // (normal GraphQL visitor)
 });
 ```
 

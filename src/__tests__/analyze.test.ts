@@ -1,4 +1,4 @@
-import { OperationDefinitionNode } from "graphql";
+import { FragmentDefinitionNode, OperationDefinitionNode } from "graphql";
 import { test, expect } from "vitest";
 import { analyze } from "../analyze";
 import {
@@ -18,7 +18,7 @@ test("should parse comment sections", () => {
 
   expect(document.definitions.length).toBe(0);
   expect(document.sections.length).toBe(1);
-  expect((document.sections[0] as IgnoredNode).value).toEqual(
+  expect((document.sections[0] as IgnoredNode).value).toBe(
     "\n# A\n\n# B\n\n# C\n"
   );
 });
@@ -57,10 +57,10 @@ query C {
 
   expect(document.definitions.length).toBe(1);
   expect(document.sections.length).toBe(7);
-  expect(document.definitions[0].kind).toEqual("OperationDefinition");
-  expect(
-    (document.definitions[0] as OperationDefinitionNode).name?.value
-  ).toEqual("B");
+  expect(document.definitions[0].kind).toBe("OperationDefinition");
+  expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+    "B"
+  );
 });
 
 test("should include operation information for invalid definitions", () => {
@@ -88,50 +88,50 @@ subscription {
 
   expect(
     (document.sections[1] as InvalidOperationDefinitionNode).operation
-  ).toEqual("query");
+  ).toBe("query");
   expect(
     (document.sections[1] as InvalidOperationDefinitionNode).name?.value
-  ).toEqual("A");
+  ).toBe("A");
 
   expect(
     (document.sections[3] as InvalidOperationDefinitionNode).operation
-  ).toEqual("query");
-  expect((document.sections[3] as InvalidOperationDefinitionNode).name).toEqual(
+  ).toBe("query");
+  expect((document.sections[3] as InvalidOperationDefinitionNode).name).toBe(
     undefined
   );
 
   expect(
     (document.sections[5] as InvalidOperationDefinitionNode).operation
-  ).toEqual("query");
-  expect((document.sections[5] as InvalidOperationDefinitionNode).name).toEqual(
+  ).toBe("query");
+  expect((document.sections[5] as InvalidOperationDefinitionNode).name).toBe(
     undefined
   );
 
   expect(
     (document.sections[7] as InvalidOperationDefinitionNode).operation
-  ).toEqual("mutation");
+  ).toBe("mutation");
   expect(
     (document.sections[7] as InvalidOperationDefinitionNode).name?.value
-  ).toEqual("D");
+  ).toBe("D");
 
   expect(
     (document.sections[9] as InvalidOperationDefinitionNode).operation
-  ).toEqual("subscription");
-  expect((document.sections[9] as InvalidOperationDefinitionNode).name).toEqual(
+  ).toBe("subscription");
+  expect((document.sections[9] as InvalidOperationDefinitionNode).name).toBe(
     undefined
   );
 });
 
 test("should include operation information for invalid definitions", () => {
   const document = analyze(`
-fragment F {
+fragment F on G {
   a {
 }
 `);
 
   expect(
     (document.sections[1] as InvalidFragmentDefinitionNode).name.value
-  ).toEqual("F");
+  ).toBe("F");
 });
 
 test("should parse empty selection sets", () => {
@@ -144,7 +144,25 @@ query A {
 `);
 
   expect(document.definitions.length).toBe(1);
-  expect(
-    (document.definitions[0] as OperationDefinitionNode).name?.value
-  ).toEqual("A");
+  expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+    "A"
+  );
+});
+
+test("should analyze single line operation", () => {
+  const document = analyze("query A { a }");
+
+  expect(document.definitions.length).toBe(1);
+  expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+    "A"
+  );
+});
+
+test("should analyze single line fragment", () => {
+  const document = analyze("fragment B on C { d }");
+
+  expect(document.definitions.length).toBe(1);
+  expect((document.definitions[0] as FragmentDefinitionNode).name.value).toBe(
+    "B"
+  );
 });
