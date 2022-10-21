@@ -3,5 +3,6 @@ dist
 node_modules
 tsconfig.tsbuildinfo
 coverage
+graphql-document-analyzer-*
 
 .DS_Store

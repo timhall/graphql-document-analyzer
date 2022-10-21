@@ -31,5 +31,8 @@
   },
   "peerDependencies": {
     "graphql": "^16"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
