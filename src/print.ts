@@ -17,7 +17,9 @@ import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 
 export function print(ast: ASTNode | ExtendedDocumentNode): string {
   if (!isExtendedDocumentNode(ast)) {
-    return graphqlPrint(ast);
+    return ensureTrailingNewline(
+      ast.kind === Kind.DOCUMENT ? resilientPrint(ast) : graphqlPrint(ast)
+    );
   }
 
   const output = [];
@@ -50,11 +52,16 @@ const TEMPORARY_FIELD: FieldNode = {
  * 2. For empty operation selections, add a temporary node so that the braces are retained
  *    (and then remove that node from the output)
  */
-function resilientPrint(definition: DefinitionNode): string {
-  const document: DocumentNode = {
-    kind: Kind.DOCUMENT,
-    definitions: [definition],
-  };
+function resilientPrint(document: DocumentNode): string;
+function resilientPrint(definition: DefinitionNode): string;
+function resilientPrint(node: DocumentNode | DefinitionNode): string {
+  const document: DocumentNode =
+    node.kind === Kind.DOCUMENT
+      ? node
+      : {
+          kind: Kind.DOCUMENT,
+          definitions: [node],
+        };
   const temporaryDocument = visit(document, {
     OperationDefinition(node) {
       if (node.selectionSet.selections.length > 0) return;

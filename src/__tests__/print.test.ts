@@ -48,3 +48,12 @@ query B {
 
   expect(print(document)).toEqual(`${source}\n`);
 });
+
+test("should print document", () => {
+  const source = `{
+  a
+}`;
+  const document = parse(source);
+
+  expect(print(document)).toEqual(`${source}\n`);
+});
