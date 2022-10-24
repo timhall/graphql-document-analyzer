@@ -1,11 +1,5 @@
-import {
-  ASTNode,
-  FragmentDefinitionNode,
-  isExecutableDefinitionNode,
-  Kind,
-  OperationDefinitionNode,
-} from "graphql";
-import {
+import type { FragmentDefinitionNode, OperationDefinitionNode } from "graphql";
+import type {
   ExtendedDocumentNode,
   InvalidFragmentDefinitionNode,
   InvalidOperationDefinitionNode,
@@ -32,33 +26,30 @@ export function interpolate(
 
   if (documentOutline.length !== referenceOutline.length) return document;
 
-  const interpolated = documentOutline.map((definition, index) => {
-    if (definition.kind === "InvalidOperationDefinition") {
-      const isAnonymous = !definition.name;
+  const sections = document.sections.map((section) => {
+    if (section.kind === "InvalidOperationDefinition") {
+      const index = documentOutline.indexOf(section);
+      const isAnonymous = !section.name;
       const replacement = isAnonymous
-        ? referenceOutline.find(findAnonymousOperation(definition, index))
-        : referenceOutline.find(findNamedOperation(definition));
+        ? referenceOutline.find(findAnonymousOperation(section, index))
+        : referenceOutline.find(findNamedOperation(section));
 
-      return replacement ?? definition;
+      if (replacement) {
+        return replacement;
+      }
     }
-    if (definition.kind === "InvalidFragmentDefinition") {
-      const replacement = referenceOutline.find(findFragment(definition));
+    if (section.kind === "InvalidFragmentDefinition") {
+      const replacement = referenceOutline.find(findFragment(section));
 
-      return replacement ?? definition;
+      if (replacement) {
+        return replacement;
+      }
     }
 
-    return definition;
+    return section;
   });
 
-  const definitions = (interpolated as ASTNode[]).filter(
-    isExecutableDefinitionNode
-  );
-
-  return {
-    kind: Kind.DOCUMENT,
-    definitions,
-    sections: document.sections,
-  };
+  return { kind: "ExtendedDocument", sections };
 }
 
 type RelevantNode =

@@ -5,6 +5,7 @@ export { isExtendedDocumentNode } from "./extended-ast";
 
 export type {
   ExtendedASTNode,
+  ExtendedASTKindToNode,
   ExtendedDocumentNode,
   SectionNode,
   InvalidDefinitionNode,

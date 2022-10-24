@@ -1,17 +1,18 @@
-import {
-  ASTNode,
+import type {
   DefinitionNode,
-  isExecutableDefinitionNode,
-  Kind,
-  Location,
   NamedTypeNode,
   NameNode,
   OperationTypeNode,
   ParseOptions,
   SelectionSetNode,
+} from "graphql";
+import {
+  Kind,
+  Location,
   Source,
   Token,
   TokenKind,
+  isExecutableDefinitionNode,
 } from "graphql";
 import { Parser } from "graphql/language/parser";
 import {
@@ -27,11 +28,8 @@ export function analyze(
   options?: ParseOptions
 ): ExtendedDocumentNode {
   const sections = parseSections(source, options);
-  const definitions = (sections as ASTNode[]).filter(
-    isExecutableDefinitionNode
-  );
 
-  return { kind: Kind.DOCUMENT, definitions, sections };
+  return { kind: "ExtendedDocument", sections };
 }
 
 type SectionNodePart =

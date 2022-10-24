@@ -16,7 +16,6 @@ test("should parse comment sections", () => {
 # C
 `);
 
-  expect(document.definitions.length).toBe(0);
   expect(document.sections.length).toBe(1);
   expect((document.sections[0] as IgnoredNode).value).toBe(
     "\n# A\n\n# B\n\n# C\n"
@@ -34,10 +33,7 @@ query B {
 }
 `);
 
-  expect(document.definitions.length).toBe(2);
   expect(document.sections.length).toBe(5);
-  expect(document.definitions[0]).toBe(document.sections[1]);
-  expect(document.definitions[1]).toBe(document.sections[3]);
 });
 
 test("should parse invalid operations", () => {
@@ -55,10 +51,9 @@ query C {
 }
 `);
 
-  expect(document.definitions.length).toBe(1);
   expect(document.sections.length).toBe(7);
-  expect(document.definitions[0].kind).toBe("OperationDefinition");
-  expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+  expect(document.sections[3].kind).toBe("OperationDefinition");
+  expect((document.sections[3] as OperationDefinitionNode).name?.value).toBe(
     "B"
   );
 });
@@ -143,8 +138,8 @@ query A {
 }
 `);
 
-  expect(document.definitions.length).toBe(1);
-  expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+  expect(document.sections.length).toBe(3);
+  expect((document.sections[1] as OperationDefinitionNode).name?.value).toBe(
     "A"
   );
 });
@@ -152,8 +147,8 @@ query A {
 test("should analyze single line operation", () => {
   const document = analyze("query A { a }");
 
-  expect(document.definitions.length).toBe(1);
-  expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+  expect(document.sections.length).toBe(1);
+  expect((document.sections[0] as OperationDefinitionNode).name?.value).toBe(
     "A"
   );
 });
@@ -161,8 +156,6 @@ test("should analyze single line operation", () => {
 test("should analyze single line fragment", () => {
   const document = analyze("fragment B on C { d }");
 
-  expect(document.definitions.length).toBe(1);
-  expect((document.definitions[0] as FragmentDefinitionNode).name.value).toBe(
-    "B"
-  );
+  expect(document.sections.length).toBe(1);
+  expect((document.sections[0] as FragmentDefinitionNode).name.value).toBe("B");
 });

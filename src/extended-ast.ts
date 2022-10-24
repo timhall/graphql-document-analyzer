@@ -1,28 +1,56 @@
 import type {
   ASTNode,
   DefinitionNode,
-  DocumentNode,
   Location,
   NamedTypeNode,
   NameNode,
   OperationTypeNode,
 } from "graphql";
+import { isRecord } from "./lib/is-record";
 
 export type ExtendedASTNode =
-  | Exclude<ASTNode, { kind: "Document" }>
+  | ASTNode
   | ExtendedDocumentNode
   | InvalidOperationDefinitionNode
   | InvalidFragmentDefinitionNode
   | IgnoredNode;
 
-export interface ExtendedDocumentNode extends DocumentNode {
+export interface ExtendedASTKindToNode {
+  ExtendedDocument: ExtendedDocumentNode;
+  InvalidOperationDefinition: InvalidOperationDefinitionNode;
+  InvalidFragmentDefinition: InvalidFragmentDefinitionNode;
+  Ignored: IgnoredNode;
+}
+
+export function isExtendedNode(
+  node: unknown
+): node is
+  | ExtendedDocumentNode
+  | InvalidOperationDefinitionNode
+  | InvalidFragmentDefinitionNode
+  | IgnoredNode {
+  return (
+    isRecord(node) &&
+    (node.kind === "ExtendedDocument" ||
+      node.kind === "InvalidOperationDefinition" ||
+      node.kind === "InvalidFragmentDefinition" ||
+      node.kind === "Ignored")
+  );
+}
+
+/**
+ * Store definitions with Invalid and Ignored nodes in `sections` array
+ */
+export interface ExtendedDocumentNode {
+  readonly kind: "ExtendedDocument";
+  readonly loc?: Location | undefined;
   readonly sections: ReadonlyArray<SectionNode>;
 }
 
 export function isExtendedDocumentNode(
-  node: ASTNode | ExtendedDocumentNode
+  node: unknown
 ): node is ExtendedDocumentNode {
-  return node.kind === "Document" && "sections" in node;
+  return isRecord(node) && node.kind === "ExtendedDocument";
 }
 
 export type SectionNode = DefinitionNode | InvalidDefinitionNode | IgnoredNode;

@@ -97,6 +97,27 @@ expect(approximate).toEqual({
 });
 ```
 
+## `visit`
+
+Visit is a section-aware visitor for extended documents, that aims to keep the document outline
+consistent with changes from the visitor.
+
+```ts
+import { analyze, visit } from "graphql-document-analyzer";
+
+const source = `# Notes about A
+query A {
+  b {
+}`;
+
+const document = analyze(source);
+const stillHasComments = visit(document, {
+  OperationDefinition(node) {
+    // ...
+  },
+});
+```
+
 ## `print`
 
 To include top-level comments and invalid sections in the printed output, use `print`.

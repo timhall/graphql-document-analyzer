@@ -7,9 +7,7 @@ test("should interpolate single anonymous operation", () => {
   const document = analyze("query { a { }");
   const interpolated = interpolate(document, reference);
 
-  expect(reference.definitions.length).toBe(1);
-  expect(document.definitions.length).toBe(0);
-  expect(interpolated.definitions[0]).toBe(reference.definitions[0]);
+  expect(interpolated.sections[0]).toBe(reference.sections[0]);
 });
 
 test("should interpolate single named operation", () => {
@@ -17,9 +15,7 @@ test("should interpolate single named operation", () => {
   const document = analyze("query A { a { }");
   const interpolated = interpolate(document, reference);
 
-  expect(reference.definitions.length).toBe(1);
-  expect(document.definitions.length).toBe(0);
-  expect(interpolated.definitions[0]).toBe(reference.definitions[0]);
+  expect(interpolated.sections[0]).toBe(reference.sections[0]);
 });
 
 test("should interpolate single named operation", () => {
@@ -27,9 +23,7 @@ test("should interpolate single named operation", () => {
   const document = analyze("query A { a { }");
   const interpolated = interpolate(document, reference);
 
-  expect(reference.definitions.length).toBe(1);
-  expect(document.definitions.length).toBe(0);
-  expect(interpolated.definitions[0]).toBe(reference.definitions[0]);
+  expect(interpolated.sections[0]).toBe(reference.sections[0]);
 });
 
 test("should interpolate document", () => {
@@ -53,7 +47,13 @@ subscription { g { }
 `);
   const interpolated = interpolate(document, reference);
 
-  expect(reference.definitions.length).toBe(7);
-  expect(document.definitions.length).toBe(4);
-  // expect(interpolated.definitions[0]).toBe(reference.definitions[0]);
+  expect(interpolated.sections.length).toBe(document.sections.length);
+  expect(interpolated.sections[0]).toBe(document.sections[0]);
+  expect(interpolated.sections[1]).toBe(document.sections[1]);
+  expect(interpolated.sections[2]).toBe(reference.sections[2]);
+  expect(interpolated.sections[3]).toBe(document.sections[3]);
+  expect(interpolated.sections[4]).toBe(reference.sections[4]);
+  expect(interpolated.sections[5]).toBe(document.sections[5]);
+  expect(interpolated.sections[6]).toBe(document.sections[6]);
+  expect(interpolated.sections[7]).toBe(reference.sections[7]);
 });
