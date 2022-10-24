@@ -4,17 +4,15 @@ import type {
   NameNode,
   OperationTypeNode,
   ParseOptions,
-  SelectionSetNode,
 } from "graphql";
 import {
+  isExecutableDefinitionNode,
   Kind,
   Location,
+  parse as graphqlParse,
   Source,
   Token,
-  TokenKind,
-  isExecutableDefinitionNode,
 } from "graphql";
-import { Parser } from "graphql/language/parser";
 import {
   ExtendedDocumentNode,
   InvalidFragmentDefinitionNode,
@@ -180,52 +178,6 @@ function parseSections(
   return sections;
 }
 
-interface GraphQL15Parser {
-  loc(start: Token): Location;
-}
-
-function isGraphQL15Parser(parser: unknown): parser is GraphQL15Parser {
-  return !!parser && typeof parser === "object" && "loc" in parser;
-}
-
-interface GraphQL16Parser {
-  node<TNode>(start: Token, node: TNode): TNode;
-}
-
-function isGraphQL16Parser(parser: unknown): parser is GraphQL16Parser {
-  return !!parser && typeof parser === "object" && "node" in parser;
-}
-
-class ResilientParser extends Parser {
-  // Generally, selection set requires non-empty selections
-  // relax this requirement to allow for readable documents (even if invalid)
-  parseSelectionSet(): SelectionSetNode {
-    // This inverts the do-while loop in many() to allow for empty-many
-    this.expectToken(TokenKind.BRACE_L);
-    const selections = [];
-    while (!this.expectOptionalToken(TokenKind.BRACE_R)) {
-      selections.push(this.parseSelection());
-    }
-
-    if (isGraphQL15Parser(this)) {
-      return {
-        kind: Kind.SELECTION_SET,
-        selections,
-        loc: this.loc(this._lexer.token),
-      };
-    } else if (isGraphQL16Parser(this)) {
-      return this.node<SelectionSetNode>(this._lexer.token, {
-        kind: Kind.SELECTION_SET,
-        selections,
-      });
-    } else {
-      throw new Error(
-        `Unsupported GraphQL version, node and loc methods are missing on Parser`
-      );
-    }
-  }
-}
-
 function tryParseDefinition(
   source: string | Source,
   location: Location,
@@ -241,8 +193,9 @@ function tryParseDefinition(
       .padStart(location.end + 1)
       .padEnd(source.body.length);
 
-    const parser = new ResilientParser(isolated, options);
-    const document = parser.parseDocument();
+    // const parser = new ResilientParser(isolated, options);
+    // const document = parser.parseDocument();
+    const document = graphqlParse(isolated, options);
     const definition = document.definitions[0];
 
     // Make sure it's an ExecutableDefinition (OperationNode or FragmentNode)
