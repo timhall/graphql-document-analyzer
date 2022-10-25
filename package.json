@@ -18,12 +18,12 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "build": "tsup src/index.ts --dts --format esm,cjs --target ES2019",
     "prepublishOnly": "pnpm build",
     "test": "vitest"
   },
   "devDependencies": {
-    "@tsconfig/node14": "^1.0.3",
+    "@tsconfig/node12": "^1.0.11",
     "@types/node": "^18.11.2",
     "graphql": "^16.6.0",
     "tsup": "^6.3.0",
