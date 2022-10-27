@@ -1,13 +1,16 @@
 import { test, expect } from "vitest";
 import { interpolate } from "../interpolate";
 import { analyze } from "../analyze";
+import { ExtendedASTNode } from "../extended-ast";
 
 test("should interpolate single anonymous operation", () => {
   const reference = analyze(`query { a }`);
   const document = analyze("query { a { }");
   const interpolated = interpolate(document, reference);
 
-  expect(interpolated.sections[0]).toBe(reference.sections[0]);
+  expect(withoutLoc(interpolated.sections[0])).toEqual(
+    withoutLoc(reference.sections[0])
+  );
 });
 
 test("should interpolate single named operation", () => {
@@ -15,7 +18,9 @@ test("should interpolate single named operation", () => {
   const document = analyze("query A { a { }");
   const interpolated = interpolate(document, reference);
 
-  expect(interpolated.sections[0]).toBe(reference.sections[0]);
+  expect(withoutLoc(interpolated.sections[0])).toEqual(
+    withoutLoc(reference.sections[0])
+  );
 });
 
 test("should interpolate single named operation", () => {
@@ -23,7 +28,9 @@ test("should interpolate single named operation", () => {
   const document = analyze("query A { a { }");
   const interpolated = interpolate(document, reference);
 
-  expect(interpolated.sections[0]).toBe(reference.sections[0]);
+  expect(withoutLoc(interpolated.sections[0])).toEqual(
+    withoutLoc(reference.sections[0])
+  );
 });
 
 test("should interpolate document", () => {
@@ -48,12 +55,50 @@ subscription { g { }
   const interpolated = interpolate(document, reference);
 
   expect(interpolated.sections.length).toBe(document.sections.length);
-  expect(interpolated.sections[0]).toBe(document.sections[0]);
-  expect(interpolated.sections[1]).toBe(document.sections[1]);
-  expect(interpolated.sections[2]).toBe(reference.sections[2]);
-  expect(interpolated.sections[3]).toBe(document.sections[3]);
-  expect(interpolated.sections[4]).toBe(reference.sections[4]);
-  expect(interpolated.sections[5]).toBe(document.sections[5]);
-  expect(interpolated.sections[6]).toBe(document.sections[6]);
-  expect(interpolated.sections[7]).toBe(reference.sections[7]);
+  expect(withoutLoc(interpolated.sections[0])).toEqual(
+    withoutLoc(document.sections[0])
+  );
+  expect(withoutLoc(interpolated.sections[1])).toEqual(
+    withoutLoc(document.sections[1])
+  );
+  expect(withoutLoc(interpolated.sections[2])).toEqual(
+    withoutLoc(reference.sections[2])
+  );
+  expect(withoutLoc(interpolated.sections[3])).toEqual(
+    withoutLoc(document.sections[3])
+  );
+  expect(withoutLoc(interpolated.sections[4])).toEqual(
+    withoutLoc(reference.sections[4])
+  );
+  expect(withoutLoc(interpolated.sections[5])).toEqual(
+    withoutLoc(document.sections[5])
+  );
+  expect(withoutLoc(interpolated.sections[6])).toEqual(
+    withoutLoc(document.sections[6])
+  );
+  expect(withoutLoc(interpolated.sections[7])).toEqual(
+    withoutLoc(reference.sections[7])
+  );
 });
+
+test("should use location of existing section", () => {
+  const reference = analyze(`query A {
+  a
+}
+`);
+  const document = analyze(`
+
+query A {
+  a {
+    b {
+  } 
+}
+`);
+  const interpolated = interpolate(document, reference);
+
+  expect(interpolated.sections[1].loc).toEqual(document.sections[1].loc);
+});
+
+function withoutLoc(value: ExtendedASTNode): ExtendedASTNode {
+  return { ...value, loc: undefined };
+}

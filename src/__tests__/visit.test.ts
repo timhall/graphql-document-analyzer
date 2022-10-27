@@ -6,6 +6,7 @@ import {
   InvalidFragmentDefinitionNode,
   isExtendedDocumentNode,
 } from "../extended-ast";
+import { OperationDefinitionNode } from "graphql";
 
 const document = analyze(`# A
 query B {
@@ -177,4 +178,20 @@ test("should passthrough sections", () => {
   expect(isExtendedDocumentNode(result)).toBe(true);
   expect(result.sections.length).toBe(5);
   expect(result.sections[0].value).toBe("# A");
+});
+
+test("should replace operations", () => {
+  const replacement = {
+    kind: "OperationDefinition",
+    operation: "query",
+    selectionSet: { kind: "SelectionSet", selections: [] },
+  };
+  const result = visit(document, {
+    OperationDefinition(node) {
+      return replacement;
+    },
+  });
+
+  expect(isExtendedDocumentNode(result)).toBe(true);
+  expect(result.sections[2]).toBe(replacement);
 });

@@ -35,14 +35,14 @@ export function interpolate(
         : referenceOutline.find(findNamedOperation(section));
 
       if (replacement) {
-        return replacement;
+        return { ...replacement, loc: section.loc };
       }
     }
     if (section.kind === "InvalidFragmentDefinition") {
       const replacement = referenceOutline.find(findFragment(section));
 
       if (replacement) {
-        return replacement;
+        return { ...replacement, loc: section.loc };
       }
     }
 
