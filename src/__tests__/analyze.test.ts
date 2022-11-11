@@ -159,3 +159,29 @@ test("should analyze single line fragment", () => {
   expect(document.sections.length).toBe(1);
   expect((document.sections[0] as FragmentDefinitionNode).name.value).toBe("B");
 });
+
+test("should analyze query with variables", () => {
+  const document = analyze(`
+query A($id: ID!) {
+  a(id: $id) {
+    b
+  }
+}
+
+query C($id: ID!) {
+  c(id: $id) {
+
+  }
+}
+  `);
+
+  expect(document.sections.length).toBe(5);
+  expect(document.sections[1].kind).toBe('OperationDefinition');
+  expect((document.sections[1] as OperationDefinitionNode).name?.value).toBe(
+    "A"
+  );
+  expect(document.sections[3].kind).toBe('InvalidOperationDefinition');
+  expect((document.sections[3] as InvalidOperationDefinitionNode).name?.value).toBe(
+    "C"
+  );
+})

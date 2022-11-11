@@ -209,7 +209,7 @@ function tryParseDefinition(
   }
 }
 
-const OPEN_OPERATION = /^(query\s*|mutation\s*|subscription\s*)?(\w+\s*)?{/;
+const OPEN_OPERATION = /^(query\s*|mutation\s*|subscription\s*)?(\w+)?\s*?(\(.*\)\s*)?{/;
 const OPEN_FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
 
 function isOperation(
@@ -222,6 +222,7 @@ function isOperation(
   const name: NameNode | undefined = match[2]
     ? { kind: Kind.NAME, value: match[2].trim() }
     : undefined;
+  // TODO match[3]: variable definitions
 
   return { operation, name };
 }
