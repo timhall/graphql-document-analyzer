@@ -18,7 +18,7 @@ export function splitLines(source: string | Source): Token[] {
     const value = source.body.substring(start, end);
 
     lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
-    lastIndex = end + match.length;
+    lastIndex = match.index + match[0].length;
   }
 
   // Add final text section after last linebreak

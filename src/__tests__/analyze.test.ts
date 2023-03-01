@@ -185,3 +185,11 @@ query C($id: ID!) {
     "C"
   );
 })
+
+test("should analyze query with /r/n line endings", () => {
+  const document = analyze('query A {\r\n\ta {\r\n\t\tid\r\n\t}\r\n}\n');
+
+  expect(document.sections.length).toBe(2);
+  expect(document.sections[0].kind).toBe('OperationDefinition');
+  expect(document.sections[1].kind).toBe('Ignored');
+})
