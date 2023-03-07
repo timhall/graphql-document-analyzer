@@ -1,47 +1,47 @@
 import {
-  ASTNode,
-  DefinitionNode,
-  DocumentNode,
-  FieldNode,
-  Kind,
-  print as graphqlPrint,
-  visit,
+	ASTNode,
+	DefinitionNode,
+	DocumentNode,
+	FieldNode,
+	Kind,
+	print as graphqlPrint,
+	visit,
 } from "graphql";
 import type { ExtendedDocumentNode } from "./extended-ast";
 import { isExtendedDocumentNode } from "./extended-ast";
 import {
-  ensureTrailingNewline,
-  trimTrailingNewlines,
+	ensureTrailingNewline,
+	trimTrailingNewlines,
 } from "./lib/trailing-newline";
 import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 
 export function print(ast: ASTNode | ExtendedDocumentNode): string {
-  if (!isExtendedDocumentNode(ast)) {
-    return ensureTrailingNewline(
-      ast.kind === Kind.DOCUMENT ? resilientPrint(ast) : graphqlPrint(ast)
-    );
-  }
+	if (!isExtendedDocumentNode(ast)) {
+		return ensureTrailingNewline(
+			ast.kind === Kind.DOCUMENT ? resilientPrint(ast) : graphqlPrint(ast)
+		);
+	}
 
-  const output = [];
-  for (const section of ast.sections) {
-    if (
-      section.kind === "Ignored" ||
-      section.kind === "InvalidOperationDefinition" ||
-      section.kind === "InvalidFragmentDefinition"
-    ) {
-      output.push(section.value);
-      continue;
-    }
+	const output = [];
+	for (const section of ast.sections) {
+		if (
+			section.kind === "Ignored" ||
+			section.kind === "InvalidOperationDefinition" ||
+			section.kind === "InvalidFragmentDefinition"
+		) {
+			output.push(section.value);
+			continue;
+		}
 
-    output.push(resilientPrint(section));
-  }
+		output.push(resilientPrint(section));
+	}
 
-  return ensureTrailingNewline(output.join("\n"));
+	return ensureTrailingNewline(output.join("\n"));
 }
 
 const TEMPORARY_FIELD: FieldNode = {
-  kind: Kind.FIELD,
-  name: { kind: Kind.NAME, value: "TEMPORARY_FIELD" },
+	kind: Kind.FIELD,
+	name: { kind: Kind.NAME, value: "TEMPORARY_FIELD" },
 };
 
 /**
@@ -55,53 +55,53 @@ const TEMPORARY_FIELD: FieldNode = {
 function resilientPrint(document: DocumentNode): string;
 function resilientPrint(definition: DefinitionNode): string;
 function resilientPrint(node: DocumentNode | DefinitionNode): string {
-  const document: DocumentNode =
-    node.kind === Kind.DOCUMENT
-      ? node
-      : {
-          kind: Kind.DOCUMENT,
-          definitions: [node],
-        };
-  const temporaryDocument = visit(document, {
-    OperationDefinition(node) {
-      if (node.selectionSet.selections.length > 0) return;
+	const document: DocumentNode =
+		node.kind === Kind.DOCUMENT
+			? node
+			: {
+					kind: Kind.DOCUMENT,
+					definitions: [node],
+			  };
+	const temporaryDocument = visit(document, {
+		OperationDefinition(node) {
+			if (node.selectionSet.selections.length > 0) return;
 
-      return {
-        ...node,
-        selectionSet: {
-          kind: Kind.SELECTION_SET,
-          selections: [TEMPORARY_FIELD],
-        },
-      };
-    },
-    Field(node) {
-      if (node.selectionSet?.selections.length !== 0) return;
+			return {
+				...node,
+				selectionSet: {
+					kind: Kind.SELECTION_SET,
+					selections: [TEMPORARY_FIELD],
+				},
+			};
+		},
+		Field(node) {
+			if (node.selectionSet?.selections.length !== 0) return;
 
-      return {
-        ...node,
-        selectionSet: {
-          kind: Kind.SELECTION_SET,
-          selections: [TEMPORARY_FIELD],
-        },
-      };
-    },
-    InlineFragment(node) {
-      if (node.selectionSet.selections.length > 0) return;
+			return {
+				...node,
+				selectionSet: {
+					kind: Kind.SELECTION_SET,
+					selections: [TEMPORARY_FIELD],
+				},
+			};
+		},
+		InlineFragment(node) {
+			if (node.selectionSet.selections.length > 0) return;
 
-      return {
-        ...node,
-        selectionSet: {
-          kind: Kind.SELECTION_SET,
-          selections: [TEMPORARY_FIELD],
-        },
-      };
-    },
-  });
+			return {
+				...node,
+				selectionSet: {
+					kind: Kind.SELECTION_SET,
+					selections: [TEMPORARY_FIELD],
+				},
+			};
+		},
+	});
 
-  const valid = graphqlPrint(temporaryDocument);
-  const value = trimTrailingNewlines(
-    trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""))
-  );
+	const valid = graphqlPrint(temporaryDocument);
+	const value = trimTrailingNewlines(
+		trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""))
+	);
 
-  return value;
+	return value;
 }

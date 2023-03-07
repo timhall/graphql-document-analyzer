@@ -4,16 +4,16 @@ import { parse } from "graphql";
 import { analyze } from "../analyze";
 
 test("should print valid ExtendedDocumentNode", () => {
-  const source = `query A {
+	const source = `query A {
   a
 }`;
-  const document = analyze(source);
+	const document = analyze(source);
 
-  expect(print(document)).toEqual(`${source}\n`);
+	expect(print(document)).toEqual(`${source}\n`);
 });
 
 test("should print comments and invalid", () => {
-  const source = `# A
+	const source = `# A
 
 query A {
   a
@@ -26,13 +26,13 @@ query B {
 # A
 # B
 # C`;
-  const document = analyze(source);
+	const document = analyze(source);
 
-  expect(print(document)).toEqual(`${source}\n`);
+	expect(print(document)).toEqual(`${source}\n`);
 });
 
 test("should print invalid, but readable documents", () => {
-  const source = `query A {
+	const source = `query A {
   a {
 
   }
@@ -44,16 +44,16 @@ query B {
     d
   }
 }`;
-  const document = analyze(source);
+	const document = analyze(source);
 
-  expect(print(document)).toEqual(`${source}\n`);
+	expect(print(document)).toEqual(`${source}\n`);
 });
 
 test("should print document", () => {
-  const source = `{
+	const source = `{
   a
 }`;
-  const document = parse(source);
+	const document = parse(source);
 
-  expect(print(document)).toEqual(`${source}\n`);
+	expect(print(document)).toEqual(`${source}\n`);
 });

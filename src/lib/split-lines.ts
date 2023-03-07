@@ -2,31 +2,31 @@ import { Source, Token, TokenKind } from "graphql";
 import { createToken } from "./create-token";
 
 export function splitLines(source: string | Source): Token[] {
-  source = typeof source === "string" ? new Source(source) : source;
+	source = typeof source === "string" ? new Source(source) : source;
 
-  const lines: Token[] = [];
+	const lines: Token[] = [];
 
-  let lastIndex = 0;
-  let line = 0;
-  for (const match of source.body.matchAll(/\r?\n/g)) {
-    line += 1;
+	let lastIndex = 0;
+	let line = 0;
+	for (const match of source.body.matchAll(/\r?\n/g)) {
+		line += 1;
 
-    if (match.index == null) continue;
+		if (match.index == null) continue;
 
-    const start = lastIndex;
-    const end = match.index;
-    const value = source.body.substring(start, end);
+		const start = lastIndex;
+		const end = match.index;
+		const value = source.body.substring(start, end);
 
-    lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
-    lastIndex = match.index + match[0].length;
-  }
+		lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
+		lastIndex = match.index + match[0].length;
+	}
 
-  // Add final text section after last linebreak
-  const start = lastIndex;
-  const end = source.body.length;
-  const value = source.body.substring(start, end);
+	// Add final text section after last linebreak
+	const start = lastIndex;
+	const end = source.body.length;
+	const value = source.body.substring(start, end);
 
-  lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
+	lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
 
-  return lines;
+	return lines;
 }
