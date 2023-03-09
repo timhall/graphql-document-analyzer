@@ -1,12 +1,11 @@
-import { visit } from "../visit";
+import { expect, test } from "vitest";
 import { analyze } from "../analyze";
-import { test, expect } from "vitest";
 import {
 	IgnoredNode,
 	InvalidFragmentDefinitionNode,
 	isExtendedDocumentNode,
 } from "../extended-ast";
-import { OperationDefinitionNode } from "graphql";
+import { visit } from "../visit";
 
 const document = analyze(`# A
 query B {

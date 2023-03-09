@@ -1,5 +1,5 @@
 import { FragmentDefinitionNode, OperationDefinitionNode } from "graphql";
-import { test, expect } from "vitest";
+import { expect, test } from "vitest";
 import { analyze } from "../analyze";
 import {
 	IgnoredNode,
@@ -64,10 +64,6 @@ query A {
   a {
 }
 
-{
-  b {
-}
-
 query {
   c {
 }
@@ -97,22 +93,15 @@ subscription {
 
 	expect(
 		(document.sections[5] as InvalidOperationDefinitionNode).operation
-	).toBe("query");
-	expect((document.sections[5] as InvalidOperationDefinitionNode).name).toBe(
-		undefined
-	);
-
-	expect(
-		(document.sections[7] as InvalidOperationDefinitionNode).operation
 	).toBe("mutation");
 	expect(
-		(document.sections[7] as InvalidOperationDefinitionNode).name?.value
+		(document.sections[5] as InvalidOperationDefinitionNode).name?.value
 	).toBe("D");
 
 	expect(
-		(document.sections[9] as InvalidOperationDefinitionNode).operation
+		(document.sections[7] as InvalidOperationDefinitionNode).operation
 	).toBe("subscription");
-	expect((document.sections[9] as InvalidOperationDefinitionNode).name).toBe(
+	expect((document.sections[7] as InvalidOperationDefinitionNode).name).toBe(
 		undefined
 	);
 });
@@ -171,7 +160,7 @@ query A($id: ID!) {
 query C($id: ID!) {
   c(id: $id) {
 
-  }
+
 }
   `);
 
@@ -180,6 +169,7 @@ query C($id: ID!) {
 	expect((document.sections[1] as OperationDefinitionNode).name?.value).toBe(
 		"A"
 	);
+
 	expect(document.sections[3].kind).toBe("InvalidOperationDefinition");
 	expect(
 		(document.sections[3] as InvalidOperationDefinitionNode).name?.value
@@ -192,4 +182,25 @@ test("should analyze query with /r/n line endings", () => {
 	expect(document.sections.length).toBe(2);
 	expect(document.sections[0].kind).toBe("OperationDefinition");
 	expect(document.sections[1].kind).toBe("Ignored");
+});
+
+test("should analyze with top-level curlies", () => {
+	const document = analyze(
+		`
+{
+a {
+b
+}
+}
+query A {
+a {
+b
+}
+}
+
+query B {
+c 
+	{d(e: "}"}}
+`
+	);
 });

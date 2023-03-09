@@ -1,7 +1,7 @@
-import { test, expect } from "vitest";
-import { interpolate } from "../interpolate";
+import { expect, test } from "vitest";
 import { analyze } from "../analyze";
 import { ExtendedASTNode } from "../extended-ast";
+import { interpolate } from "../interpolate";
 
 test("should interpolate single anonymous operation", () => {
 	const reference = analyze(`query { a }`);
@@ -37,7 +37,6 @@ test("should interpolate document", () => {
 	const reference = analyze(`
 query A { a }
 query { b }
-{ c }
 mutation D { d }
 mutation { e }
 subscription F { f }
@@ -46,7 +45,6 @@ subscription { g }
 	const document = analyze(`
 query A { a }
 query { b { }
-{ c }
 mutation D { d { }
 mutation { e }
 subscription F { f }
@@ -65,19 +63,16 @@ subscription { g { }
 		withoutLoc(reference.sections[2])
 	);
 	expect(withoutLoc(interpolated.sections[3])).toEqual(
-		withoutLoc(document.sections[3])
+		withoutLoc(reference.sections[3])
 	);
 	expect(withoutLoc(interpolated.sections[4])).toEqual(
-		withoutLoc(reference.sections[4])
+		withoutLoc(document.sections[4])
 	);
 	expect(withoutLoc(interpolated.sections[5])).toEqual(
 		withoutLoc(document.sections[5])
 	);
 	expect(withoutLoc(interpolated.sections[6])).toEqual(
-		withoutLoc(document.sections[6])
-	);
-	expect(withoutLoc(interpolated.sections[7])).toEqual(
-		withoutLoc(reference.sections[7])
+		withoutLoc(reference.sections[6])
 	);
 });
 

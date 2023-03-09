@@ -1,5 +1,8 @@
-import { Source, Token, TokenKind } from "graphql";
-import { createToken } from "./create-token";
+import { Location, Source, Token, TokenKind } from "graphql";
+
+export function substring(source: Source, location: Location): string {
+	return source.body.substring(location.start, location.end);
+}
 
 export function splitLines(source: string | Source): Token[] {
 	source = typeof source === "string" ? new Source(source) : source;
@@ -17,7 +20,7 @@ export function splitLines(source: string | Source): Token[] {
 		const end = match.index;
 		const value = source.body.substring(start, end);
 
-		lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
+		lines.push(new Token(TokenKind.STRING, start, end, line, 1, null, value));
 		lastIndex = match.index + match[0].length;
 	}
 
@@ -26,7 +29,7 @@ export function splitLines(source: string | Source): Token[] {
 	const end = source.body.length;
 	const value = source.body.substring(start, end);
 
-	lines.push(createToken(TokenKind.STRING, start, end, line, 0, value));
+	lines.push(new Token(TokenKind.STRING, start, end, line + 1, 1, null, value));
 
 	return lines;
 }

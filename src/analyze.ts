@@ -1,15 +1,13 @@
-import type {
-	DefinitionNode,
-	NamedTypeNode,
-	NameNode,
-	OperationTypeNode,
-	ParseOptions,
-} from "graphql";
 import {
+	DefinitionNode,
 	isExecutableDefinitionNode,
 	Kind,
 	Location,
+	NamedTypeNode,
+	NameNode,
+	OperationTypeNode,
 	parse as graphqlParse,
+	ParseOptions,
 	Source,
 	Token,
 } from "graphql";
@@ -19,15 +17,15 @@ import {
 	InvalidOperationDefinitionNode,
 	SectionNode,
 } from "./extended-ast";
-import { splitLines } from "./lib/split-lines";
+import { splitLines } from "./lib/source";
+import { ResilientParser } from "./resilient-parser";
 
 export function analyze(
 	source: string,
 	options?: ParseOptions
 ): ExtendedDocumentNode {
-	const sections = parseSections(source, options);
-
-	return { kind: "ExtendedDocument", sections };
+	const parser = new ResilientParser(source, options);
+	return parser.parseExtendedDocument();
 }
 
 type SectionNodePart =
@@ -76,11 +74,6 @@ const CLOSE = /}\s*$/;
  *   { kind: 'Invalid', value: 'query A {\n\n} },
  *   { kind: 'Operation' }
  * ]
- *
- * Heuristics:
- *
- * 1. Operations and fragments are on separate lines
- * 2. Whitespace is significant, so "{" denotes the start of an operation and "}" the close
  */
 function parseSections(
 	source: string | Source,
@@ -114,6 +107,9 @@ function parseSections(
 		const definition = tryParseDefinition(source, loc, options);
 		sections.push(definition ?? { ...node, value, loc });
 	};
+
+	// const openings = lines.filter((line) => isOperation(line.value));
+	// const closings = lines.filter((line) => CLOSE.test(line.value));
 
 	for (const line of lines) {
 		if (open && line.value && TOP_LEVEL_CLOSE.test(line.value)) {
