@@ -5,6 +5,7 @@ import {
 	invalidOperationDefinition,
 	InvalidOperationDefinitionNode,
 } from "../extended-ast";
+import { safeAdvance } from "./lexer";
 
 export type Landmark =
 	| InvalidFragmentDefinitionNode
@@ -47,21 +48,24 @@ export function findNextLandmark(
 /**
  * Advance lexer state to location of next landmark
  */
-export function advanceToLandmark(lexer: Lexer, landmark: Landmark): void {
+export function safeAdvanceToLandmark(lexer: Lexer, landmark: Landmark): void {
 	while (
 		landmark.loc
 			? lexer.token.kind !== TokenKind.EOF &&
 			  lexer.token.line < landmark.loc.startToken.line
 			: lexer.token.kind !== TokenKind.EOF
 	) {
-		lexer.advance();
+		safeAdvance(lexer);
 	}
 }
 
 /**
  * Advance lexer state to next landmark, throwing if non-whitespace/comments are encountered
  */
-export function safeAdvanceToLandmark(lexer: Lexer, landmark: Landmark): void {
+export function strictAdvanceToLandmark(
+	lexer: Lexer,
+	landmark: Landmark
+): void {
 	while (
 		landmark?.loc
 			? lexer.token.kind !== TokenKind.EOF &&

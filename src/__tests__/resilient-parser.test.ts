@@ -3,7 +3,6 @@ import { IgnoredNode, InvalidOperationDefinitionNode } from "../extended-ast";
 import { ResilientParser } from "../resilient-parser";
 
 test("should parse sections", () => {
-	expect(true).toBe(true);
 	const parser = new ResilientParser(`
 # leading
 
@@ -78,5 +77,57 @@ fragment C on D {
 	expect(document.sections[10].kind).toBe("Ignored");
 	expect((document.sections[10] as IgnoredNode).value).toBe(
 		"\n# trailing\n    "
+	);
+});
+
+test("should parse odd indentation", () => {
+	const parser = new ResilientParser(`query Cart {
+    cart(id: "123") {
+        grandTotal {
+            formatted
+        }
+        id
+        items {
+            name
+            quantity
+            lineTotal {
+                formatted
+            }
+        }
+}
+}
+
+mutation AddItem {
+    addItem(
+        input: {cartId: "123", id: "shirt", name: "Shirt", price: 2500, quantity: 5, type: SKU}
+    ) {
+        id
+    }
+}
+
+mutation EmptyCart {
+    emptyCart(input: {id: "123"}) {
+        id
+    }
+}
+`);
+
+	const document = parser.parseExtendedDocument();
+	expect(document.sections.length).toBe(6);
+	expect(document.sections[0].kind).toBe("OperationDefinition");
+});
+
+test("should handle syntax errors", () => {
+	const source = `query Test {
+	# \u042B
+	Ы
+}`;
+	const parser = new ResilientParser(source);
+
+	const document = parser.parseExtendedDocument();
+	expect(document.sections.length).toBe(1);
+	expect(document.sections[0].kind).toBe("InvalidOperationDefinition");
+	expect((document.sections[0] as InvalidOperationDefinitionNode).value).toBe(
+		source
 	);
 });

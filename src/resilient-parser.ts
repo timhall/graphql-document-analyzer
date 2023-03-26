@@ -22,25 +22,25 @@ import {
 } from "./extended-ast";
 import { insertWhitespace } from "./lib/insert-whitespace";
 import {
-	advanceToLandmark,
+	safeAdvanceToLandmark,
 	findLandmarks,
 	findNextLandmark,
 	Landmark,
-	safeAdvanceToLandmark,
+	strictAdvanceToLandmark,
 	tryParseFragment,
 	tryParseOperation,
 } from "./lib/landmarks";
 import {
-	advanceToEOF,
-	restoreLexer,
 	safeAdvanceToEOF,
+	restoreLexer,
+	strictAdvanceToEOF,
 	snapshotLexer,
 } from "./lib/lexer";
 import { splitLines, substring } from "./lib/source";
 
 export class ResilientParser extends Parser {
-	_lines: Token[];
-	_landmarks: Landmark[];
+	protected _lines: Token[];
+	protected _landmarks: Landmark[];
 
 	constructor(source: string | Source, options: ParseOptions = {}) {
 		source = typeof source === "string" ? new Source(source) : source;
@@ -97,9 +97,9 @@ export class ResilientParser extends Parser {
 			// For valid operation definition, check for trailing invalid tokens
 			const next = findNextLandmark(this._landmarks, this._lexer.token.line);
 			if (next) {
-				safeAdvanceToLandmark(this._lexer, next);
+				strictAdvanceToLandmark(this._lexer, next);
 			} else {
-				safeAdvanceToEOF(this._lexer);
+				strictAdvanceToEOF(this._lexer);
 			}
 
 			return definition;
@@ -124,9 +124,9 @@ export class ResilientParser extends Parser {
 			);
 
 			if (next) {
-				advanceToLandmark(this._lexer, next);
+				safeAdvanceToLandmark(this._lexer, next);
 			} else {
-				advanceToEOF(this._lexer);
+				safeAdvanceToEOF(this._lexer);
 			}
 
 			const end = this._lexer.lastToken;
@@ -151,9 +151,9 @@ export class ResilientParser extends Parser {
 			// For valid operation definition, check for trailing invalid tokens
 			const next = findNextLandmark(this._landmarks, this._lexer.token.line);
 			if (next) {
-				safeAdvanceToLandmark(this._lexer, next);
+				strictAdvanceToLandmark(this._lexer, next);
 			} else {
-				safeAdvanceToEOF(this._lexer);
+				strictAdvanceToEOF(this._lexer);
 			}
 
 			return fragment;
@@ -174,9 +174,9 @@ export class ResilientParser extends Parser {
 			);
 
 			if (next) {
-				advanceToLandmark(this._lexer, next);
+				safeAdvanceToLandmark(this._lexer, next);
 			} else {
-				advanceToEOF(this._lexer);
+				safeAdvanceToEOF(this._lexer);
 			}
 
 			const end = this._lexer.lastToken;
@@ -195,9 +195,9 @@ export class ResilientParser extends Parser {
 		const next = findNextLandmark(this._landmarks, this._lexer.token.line + 1);
 
 		if (next) {
-			advanceToLandmark(this._lexer, next);
+			safeAdvanceToLandmark(this._lexer, next);
 		} else {
-			advanceToEOF(this._lexer);
+			safeAdvanceToEOF(this._lexer);
 		}
 		const end = this._lexer.lastToken;
 

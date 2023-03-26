@@ -1,4 +1,5 @@
-import { Lexer, Token, TokenKind } from "graphql";
+import { Lexer, Source, Token, TokenKind } from "graphql";
+import { splitLines } from "./source";
 
 type LexerState = {
 	lastToken: Token;
@@ -49,21 +50,43 @@ export function snapshotLexer(lexer: Lexer): LexerState {
 /**
  * Advance lexer state to end-of-file
  */
-export function advanceToEOF(lexer: Lexer): void {
+export function safeAdvanceToEOF(lexer: Lexer): void {
 	while (lexer.token.kind !== TokenKind.EOF) {
-		lexer.advance();
+		safeAdvance(lexer);
 	}
 }
 
 /**
  * Advance lexer state to end-of-file, throwing if non-whitespace/comment tokens are encountered
  */
-export function safeAdvanceToEOF(lexer: Lexer): void {
+export function strictAdvanceToEOF(lexer: Lexer): void {
 	while (lexer.token.kind !== TokenKind.EOF) {
 		if (lexer.token.kind !== TokenKind.COMMENT) {
 			throw new Error(`Unexpected token kind "${lexer.token.kind}"`);
 		}
 
 		lexer.advance();
+	}
+}
+
+/**
+ * Safely advance the lexer, parsing invalid sections as BlockString and EOF
+ */
+export function safeAdvance(lexer: Lexer): void {
+	try {
+		lexer.advance();
+	} catch {
+		const lines = splitLines(lexer.source);
+		const EOF = new Token(
+			TokenKind.EOF,
+			lexer.source.body.length,
+			lexer.source.body.length,
+			lines.length + 1,
+			1,
+			lexer.token
+		);
+
+		lexer.lastToken = EOF;
+		lexer.token = EOF;
 	}
 }
