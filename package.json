@@ -1,6 +1,6 @@
 {
 	"name": "graphql-document-analyzer",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"description": "Resilient analyzing and printing of GraphQL documents",
 	"keywords": [
 		"graphql",
