@@ -9,7 +9,7 @@ import {
 	Token,
 } from "graphql";
 import { isRecord } from "./lib/is-record";
-import { substring } from "./lib/source";
+import { substring } from "./lib/substring";
 
 export type ExtendedASTNode =
 	| ASTNode

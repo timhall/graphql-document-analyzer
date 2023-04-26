@@ -1,8 +1,4 @@
-import { Location, Source, Token, TokenKind } from "graphql";
-
-export function substring(source: Source, location: Location): string {
-	return source.body.substring(location.start, location.end);
-}
+import { Source, Token, TokenKind } from "graphql";
 
 export function splitLines(source: string | Source): Token[] {
 	source = typeof source === "string" ? new Source(source) : source;

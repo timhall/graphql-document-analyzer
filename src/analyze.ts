@@ -1,240 +1,252 @@
 import {
-	DefinitionNode,
-	isExecutableDefinitionNode,
+	FragmentDefinitionNode,
 	Kind,
 	Location,
-	NamedTypeNode,
-	NameNode,
-	OperationTypeNode,
-	parse as graphqlParse,
+	OperationDefinitionNode,
 	ParseOptions,
+	SelectionSetNode,
 	Source,
 	Token,
+	TokenKind,
+	TokenKindEnum,
 } from "graphql";
+import { Parser } from "graphql/language/parser";
 import {
 	ExtendedDocumentNode,
+	invalid,
 	InvalidFragmentDefinitionNode,
+	InvalidNode,
 	InvalidOperationDefinitionNode,
+	invalidShorthandOperationDefinition,
 	SectionNode,
 } from "./extended-ast";
-import { splitLines } from "./lib/source";
-import { ResilientParser } from "./resilient-parser";
+import { insertWhitespace } from "./lib/insert-whitespace";
+import {
+	safeAdvanceToLandmark,
+	findLandmarks,
+	findNextLandmark,
+	Landmark,
+	strictAdvanceToLandmark,
+	tryParseFragment,
+	tryParseOperation,
+} from "./landmarks";
+import {
+	safeAdvanceToEOF,
+	restoreLexer,
+	strictAdvanceToEOF,
+	snapshotLexer,
+} from "./lexer";
+import { splitLines } from "./lib/split-lines";
+import { substring } from "./lib/substring";
 
 export function analyze(
 	source: string,
 	options?: ParseOptions
 ): ExtendedDocumentNode {
-	const parser = new ResilientParser(source, options);
+	const parser = new ExtendedParser(source, options);
 	return parser.parseExtendedDocument();
 }
 
-type SectionNodePart =
-	| Omit<InvalidOperationDefinitionNode, "loc" | "value">
-	| Omit<InvalidFragmentDefinitionNode, "loc" | "value">;
+export class ExtendedParser extends Parser {
+	protected _lines: Token[];
+	protected _landmarks: Landmark[];
 
-const TOP_LEVEL_CLOSE = /^}/;
-const CLOSE = /}\s*$/;
+	constructor(source: string | Source, options: ParseOptions = {}) {
+		source = typeof source === "string" ? new Source(source) : source;
 
-/**
- * The GraphQL parser isn't resilient to invalid documents,
- * and completely fails to parse documents with any errors.
- *
- * These heuristics attempt to determine sections from a document
- * for more accurate inserting / replacing of sections of the document
- *
- * From a Document, the following top-level definitions are supported:
- *
- * - ExecutableDefinition = Operation or Fragment
- * - TypeSystemDefinition = Schema, Type, or Directive
- * - TypeSystemExtension = SchemaExtension or TypeExtension
- *
- * The last two are most likely dealing with parsing schemas,
- * so they are ignored for now.
- *
- * Example:
- * source = `query {
- *
- * }`
- *
- * result = [{ kind: 'Invalid', value: 'query {\n\n} }]
- *
- * Additionally, the document is split into regions and attempted to be parsed separately
- * with valid parts returning the parsed node
- *
- * Example:
- * source = `query A {
- *
- * }
- *
- * query B {
- *   b
- * }`
- *
- * result = [
- *   { kind: 'Invalid', value: 'query A {\n\n} },
- *   { kind: 'Operation' }
- * ]
- */
-function parseSections(
-	source: string | Source,
-	options?: ParseOptions
-): SectionNode[] {
-	source = typeof source === "string" ? new Source(source) : source;
+		super(source, options);
 
-	const lines = splitLines(source);
-	const sections: SectionNode[] = [];
+		this._lines = splitLines(source);
+		this._landmarks = findLandmarks(source, this._lines);
+	}
 
-	let open: { token: Token; node: SectionNodePart } | undefined;
-	let ignored: Token[] = [];
+	parseExtendedDocument(): ExtendedDocumentNode {
+		const definitions: SectionNode[] = this.zeroToMany(
+			TokenKind.SOF,
+			this.parseSection,
+			TokenKind.EOF
+		);
+		const sections = insertWhitespace(
+			this._lexer.source,
+			this._lines,
+			definitions
+		);
 
-	const writeIgnored = () => {
-		if (!ignored.length) return;
+		return {
+			kind: "ExtendedDocument",
+			sections,
+		};
+	}
 
-		const startToken = ignored[0];
-		const endToken = ignored[ignored.length - 1];
-		const loc = new Location(startToken, endToken, source as Source);
-		const value = (source as Source).body.substring(loc.start, loc.end);
-
-		sections.push({ kind: "Ignored", value, loc });
-
-		ignored = [];
-	};
-
-	const writeSection = (node: SectionNodePart, open: Token, close: Token) => {
-		const loc = new Location(open, close, source as Source);
-		const value = (source as Source).body.substring(loc.start, loc.end);
-
-		const definition = tryParseDefinition(source, loc, options);
-		sections.push(definition ?? { ...node, value, loc });
-	};
-
-	// const openings = lines.filter((line) => isOperation(line.value));
-	// const closings = lines.filter((line) => CLOSE.test(line.value));
-
-	for (const line of lines) {
-		if (open && line.value && TOP_LEVEL_CLOSE.test(line.value)) {
-			// Top-level close for open operation or fragment
-			writeSection(open.node, open.token, line);
-
-			open = undefined;
-			continue;
+	parseSection(): SectionNode {
+		if (this.peek(TokenKind.NAME)) {
+			switch (this._lexer.token.value) {
+				case "query":
+				case "mutation":
+				case "subscription":
+					return this.tryParseOperationDefinition();
+				case "fragment":
+					return this.tryParseFragmentDefinition();
+			}
+		} else if (this.peek(TokenKind.BRACE_L)) {
+			return this.tryParseOperationDefinition();
 		}
 
-		let operation = line.value ? isOperation(line.value) : false;
-		if (operation && !open) {
-			writeIgnored();
+		return this.parseInvalid();
+	}
 
-			if (line.value && CLOSE.test(line.value)) {
-				// Single-line operation
-				writeSection(
-					{ kind: "InvalidOperationDefinition", ...operation },
-					line,
-					line
-				);
+	tryParseOperationDefinition():
+		| OperationDefinitionNode
+		| InvalidOperationDefinitionNode
+		| InvalidNode {
+		const snapshot = snapshotLexer(this._lexer);
+		try {
+			const definition = this.parseOperationDefinition();
+
+			// For valid operation definition, check for trailing invalid tokens
+			const next = findNextLandmark(this._landmarks, this._lexer.token.line);
+			if (next) {
+				strictAdvanceToLandmark(this._lexer, next);
 			} else {
-				// Multi-line operation
-				open = {
-					token: line,
-					node: { kind: "InvalidOperationDefinition", ...operation },
-				};
+				strictAdvanceToEOF(this._lexer);
 			}
 
-			continue;
-		}
+			return definition;
+		} catch (error) {
+			restoreLexer(this._lexer, snapshot);
 
-		let fragment = line.value ? isFragment(line.value) : false;
-		if (fragment && !open) {
-			writeIgnored();
+			const start = this._lexer.token;
+			const invalidOperation =
+				start.kind === TokenKind.BRACE_L
+					? invalidShorthandOperationDefinition(
+							this._lexer.source,
+							start,
+							start
+					  )
+					: tryParseOperation(this._lexer.source, this._lines[start.line - 1]);
+			if (!invalidOperation) return this.parseInvalid();
 
-			if (line.value && CLOSE.test(line.value)) {
-				// Single-line fragment
-				writeSection(
-					{ kind: "InvalidFragmentDefinition", ...fragment },
-					line,
-					line
-				);
+			// For invalid operation definition, search for next definition on next line
+			const next = findNextLandmark(
+				this._landmarks,
+				this._lexer.token.line + 1
+			);
+
+			if (next) {
+				safeAdvanceToLandmark(this._lexer, next);
 			} else {
-				// Multi-line fragment
-				open = {
-					token: line,
-					node: { kind: "InvalidFragmentDefinition", ...fragment },
-				};
+				safeAdvanceToEOF(this._lexer);
 			}
 
-			continue;
-		}
+			const end = this._lexer.lastToken;
+			const loc = new Location(start, end, this._lexer.source);
 
-		if (!open) {
-			ignored.push(line);
+			return {
+				...invalidOperation,
+				value: substring(this._lexer.source, loc),
+				loc,
+			};
 		}
 	}
 
-	writeIgnored();
+	tryParseFragmentDefinition():
+		| FragmentDefinitionNode
+		| InvalidFragmentDefinitionNode
+		| InvalidNode {
+		const snapshot = snapshotLexer(this._lexer);
+		try {
+			const fragment = this.parseFragmentDefinition();
 
-	return sections;
-}
+			// For valid operation definition, check for trailing invalid tokens
+			const next = findNextLandmark(this._landmarks, this._lexer.token.line);
+			if (next) {
+				strictAdvanceToLandmark(this._lexer, next);
+			} else {
+				strictAdvanceToEOF(this._lexer);
+			}
 
-function tryParseDefinition(
-	source: string | Source,
-	location: Location,
-	options: ParseOptions = {}
-): DefinitionNode | undefined {
-	source = typeof source === "string" ? new Source(source) : source;
+			return fragment;
+		} catch (error) {
+			restoreLexer(this._lexer, snapshot);
 
-	try {
-		// Attempt to parse just the given location,
-		// but maintain position in original source to keep locations accurate
-		const value = source.body.substring(location.start, location.end);
-		const isolated = value
-			.padStart(location.end + 1)
-			.padEnd(source.body.length);
+			const start = this._lexer.token;
+			const invalidFragment = tryParseFragment(
+				this._lexer.source,
+				this._lines[start.line - 1]
+			);
+			if (!invalidFragment) return this.parseInvalid();
 
-		// const parser = new ResilientParser(isolated, options);
-		// const document = parser.parseDocument();
-		const document = graphqlParse(isolated, options);
-		const definition = document.definitions[0];
+			// For invalid fragment definition, search for next definition on next line
+			const next = findNextLandmark(
+				this._landmarks,
+				this._lexer.token.line + 1
+			);
 
-		// Make sure it's an ExecutableDefinition (OperationNode or FragmentNode)
-		if (!isExecutableDefinitionNode(definition)) {
-			return undefined;
+			if (next) {
+				safeAdvanceToLandmark(this._lexer, next);
+			} else {
+				safeAdvanceToEOF(this._lexer);
+			}
+
+			const end = this._lexer.lastToken;
+			const loc = new Location(start, end, this._lexer.source);
+
+			return {
+				...invalidFragment,
+				value: substring(this._lexer.source, loc),
+				loc,
+			};
+		}
+	}
+
+	parseInvalid(): InvalidNode {
+		const start = this._lexer.token;
+		const next = findNextLandmark(this._landmarks, this._lexer.token.line + 1);
+
+		if (next) {
+			safeAdvanceToLandmark(this._lexer, next);
+		} else {
+			safeAdvanceToEOF(this._lexer);
+		}
+		const end = this._lexer.lastToken;
+
+		return invalid(this._lexer.source, start, end);
+	}
+
+	// @override
+	parseSelectionSet(): SelectionSetNode {
+		// Generally, selection set requires non-empty selections,
+		// relax this requirement to allow for readable documents (even if invalid)
+		const start = this._lexer.token;
+		return {
+			kind: Kind.SELECTION_SET,
+			selections: this.zeroToMany(
+				TokenKind.BRACE_L,
+				this.parseSelection,
+				TokenKind.BRACE_R
+			),
+			loc: this.loc(start),
+		};
+	}
+
+	/**
+	 * Returns a list of parse nodes that may be empty, determined by the parseFn.
+	 * This list begins with a lex token of openKind and ends with a lex token of closeKind.
+	 * Advances the parser to the next lex token after the closing token.
+	 */
+	zeroToMany<T>(
+		openKind: TokenKindEnum,
+		parseFn: () => T,
+		closeKind: TokenKindEnum
+	): Array<T> {
+		this.expectToken(openKind);
+
+		// This inverts the do-while loop in many() to allow for empty-many
+		const nodes: T[] = [];
+		while (!this.expectOptionalToken(closeKind)) {
+			nodes.push(parseFn.call(this));
 		}
 
-		return definition;
-	} catch (_error) {
-		return undefined;
+		return nodes;
 	}
-}
-
-const OPEN_OPERATION =
-	/^(query\s*|mutation\s*|subscription\s*)?(\w+)?\s*?(\(.*\)\s*)?{/;
-const OPEN_FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
-
-function isOperation(
-	line: string
-): Pick<InvalidOperationDefinitionNode, "operation" | "name"> | false {
-	const match = line.match(OPEN_OPERATION);
-	if (match == null) return false;
-
-	const operation = (match[1] ? match[1].trim() : "query") as OperationTypeNode;
-	const name: NameNode | undefined = match[2]
-		? { kind: Kind.NAME, value: match[2].trim() }
-		: undefined;
-	// TODO match[3]: variable definitions
-
-	return { operation, name };
-}
-
-function isFragment(
-	line: string
-): Pick<InvalidFragmentDefinitionNode, "name" | "typeCondition"> | false {
-	const match = line.match(OPEN_FRAGMENT);
-	if (match == null) return false;
-
-	const name: NameNode = { kind: Kind.NAME, value: match[1] };
-	const typeCondition: NamedTypeNode = {
-		kind: Kind.NAMED_TYPE,
-		name: { kind: Kind.NAME, value: match[2] },
-	};
-
-	return { name, typeCondition };
 }

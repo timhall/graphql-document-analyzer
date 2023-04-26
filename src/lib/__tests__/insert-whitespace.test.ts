@@ -2,7 +2,7 @@ import { Source } from "graphql";
 import { expect, test } from "vitest";
 import { IgnoredNode, invalidOperationDefinition } from "../../extended-ast";
 import { insertWhitespace } from "../insert-whitespace";
-import { splitLines } from "../source";
+import { splitLines } from "../split-lines";
 
 test("should not add whitespace for no blank lines", () => {
 	const source = new Source(`query {

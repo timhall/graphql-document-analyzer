@@ -4,7 +4,7 @@ import {
 	InvalidFragmentDefinitionNode,
 	invalidOperationDefinition,
 	InvalidOperationDefinitionNode,
-} from "../extended-ast";
+} from "./extended-ast";
 import { safeAdvance } from "./lexer";
 
 export type Landmark =
