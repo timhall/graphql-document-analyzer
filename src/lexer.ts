@@ -1,4 +1,4 @@
-import { Lexer, Source, Token, TokenKind } from "graphql";
+import { Lexer, Token, TokenKind } from "graphql";
 import { splitLines } from "./lib/split-lines";
 
 type LexerState = {

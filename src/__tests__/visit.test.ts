@@ -1,14 +1,13 @@
 import { expect, test } from "vitest";
 import { analyze } from "../analyze";
 import {
-	IgnoredNode,
 	InvalidFragmentDefinitionNode,
+	InvalidOperationDefinitionNode,
 	isExtendedDocumentNode,
 } from "../extended-ast";
 import { visit } from "../visit";
 
-const document = analyze(`# A
-query B {
+const document = analyze(`query B {
   c {
 }
 query D {
@@ -67,20 +66,24 @@ test("should visit document and sections", () => {
 test("should edit sections on enter", () => {
 	const { entered, record } = recorder();
 
-	const ignored = { kind: "Ignored", value: "# New Value" };
+	const added = {
+		kind: "InvalidOperationDefinition",
+		operation: "query",
+		value: "{ todo }",
+	};
 	const fnResult = visit(document, {
 		ExtendedDocument(node) {
 			return {
 				...node,
-				sections: [...node.sections, ignored],
+				sections: [...node.sections, added],
 			};
 		},
-		Ignored: record("Ignored"),
+		InvalidOperationDefinition: record("InvalidOperationDefinition"),
 	});
 
 	expect(isExtendedDocumentNode(fnResult)).toBe(true);
-	expect(fnResult.sections.length).toBe(6);
-	expect(fnResult.sections[5]).toBe(ignored);
+	expect(fnResult.sections.length).toBe(5);
+	expect(fnResult.sections[4]).toBe(added);
 	expect(entered.length).toBe(2);
 
 	const enterResult = visit(document, {
@@ -88,44 +91,48 @@ test("should edit sections on enter", () => {
 			enter(node) {
 				return {
 					...node,
-					sections: [...node.sections, ignored],
+					sections: [...node.sections, added],
 				};
 			},
 		},
-		Ignored: record("Ignored"),
+		InvalidOperationDefinition: record("InvalidOperationDefinition"),
 	});
 
 	expect(isExtendedDocumentNode(enterResult)).toBe(true);
-	expect(enterResult.sections.length).toBe(6);
-	expect(enterResult.sections[5]).toBe(ignored);
+	expect(enterResult.sections.length).toBe(5);
+	expect(enterResult.sections[4]).toBe(added);
 	expect(entered.length).toBe(4);
 });
 
 test("should edit sections on leave", () => {
 	const { entered, record } = recorder();
 
-	const ignored = { kind: "Ignored", value: "# New Value" };
+	const added = {
+		kind: "InvalidOperationDefinition",
+		operation: "query",
+		value: "{ todo }",
+	};
 	const leaveResult = visit(document, {
 		ExtendedDocument: {
 			leave(node) {
 				return {
 					...node,
-					sections: [...node.sections, ignored],
+					sections: [...node.sections, added],
 				};
 			},
 		},
-		Ignored: record("Ignored"),
+		InvalidOperationDefinition: record("InvalidOperationDefinition"),
 	});
 
 	expect(isExtendedDocumentNode(leaveResult)).toBe(true);
-	expect(leaveResult.sections.length).toBe(6);
-	expect(leaveResult.sections[5]).toBe(ignored);
+	expect(leaveResult.sections.length).toBe(5);
+	expect(leaveResult.sections[4]).toBe(added);
 	expect(entered.length).toBe(1);
 });
 
 test("should map sections", () => {
 	const result = visit(document, {
-		Ignored: {
+		InvalidOperationDefinition: {
 			enter(node) {
 				return {
 					...node,
@@ -148,35 +155,14 @@ test("should map sections", () => {
 	});
 
 	expect(isExtendedDocumentNode(result)).toBe(true);
-	expect((document.sections[0] as IgnoredNode).value).toBe("# A");
-	expect(result.sections[0].value).toBe("# A (entered) (left)");
+	expect((document.sections[0] as InvalidOperationDefinitionNode).value).toBe(
+		"query B {\n  c {\n}"
+	);
+	expect(result.sections[0].value).toBe("query B {\n  c {\n} (entered) (left)");
 	expect(
-		(document.sections[3] as InvalidFragmentDefinitionNode).name.value
+		(document.sections[2] as InvalidFragmentDefinitionNode).name.value
 	).toBe("F");
-	expect(result.sections[3].name.value).toBe("InvalidF");
-});
-
-test("should remove sections", () => {
-	const result = visit(document, {
-		Ignored() {
-			return null;
-		},
-	});
-
-	expect(isExtendedDocumentNode(result)).toBe(true);
-	expect(result.sections.length).toBe(4);
-});
-
-test("should passthrough sections", () => {
-	const result = visit(document, {
-		Ignored() {
-			return undefined;
-		},
-	});
-
-	expect(isExtendedDocumentNode(result)).toBe(true);
-	expect(result.sections.length).toBe(5);
-	expect(result.sections[0].value).toBe("# A");
+	expect(result.sections[2].name.value).toBe("InvalidF");
 });
 
 test("should replace operations", () => {
@@ -192,5 +178,5 @@ test("should replace operations", () => {
 	});
 
 	expect(isExtendedDocumentNode(result)).toBe(true);
-	expect(result.sections[2]).toBe(replacement);
+	expect(result.sections[1]).toBe(replacement);
 });

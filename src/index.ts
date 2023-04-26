@@ -2,7 +2,7 @@ export { analyze } from "./analyze";
 export { isExtendedDocumentNode } from "./extended-ast";
 export { interpolate } from "./interpolate";
 export { print } from "./print";
-export { visit } from "./visit";
+export { visit, ExtendedQueryDocumentKeys } from "./visit";
 
 export type {
 	ExtendedASTNode,
@@ -12,6 +12,7 @@ export type {
 	InvalidDefinitionNode,
 	InvalidOperationDefinitionNode,
 	InvalidFragmentDefinitionNode,
-	IgnoredNode,
+	InvalidNode,
+	CommentNode,
 } from "./extended-ast";
 export type { ExtendedASTVisitor } from "./visit";

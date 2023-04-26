@@ -11,30 +11,31 @@ import {
 	TokenKindEnum,
 } from "graphql";
 import { Parser } from "graphql/language/parser";
+import { isSource } from "graphql/language/source";
+import { processDocumentComments, processSectionComments } from "./comments";
 import {
 	ExtendedDocumentNode,
-	invalid,
 	InvalidFragmentDefinitionNode,
 	InvalidNode,
 	InvalidOperationDefinitionNode,
-	invalidShorthandOperationDefinition,
 	SectionNode,
+	invalid,
+	invalidShorthandOperationDefinition,
 } from "./extended-ast";
-import { insertWhitespace } from "./lib/insert-whitespace";
 import {
-	safeAdvanceToLandmark,
+	Landmark,
 	findLandmarks,
 	findNextLandmark,
-	Landmark,
+	safeAdvanceToLandmark,
 	strictAdvanceToLandmark,
 	tryParseFragment,
 	tryParseOperation,
 } from "./landmarks";
 import {
-	safeAdvanceToEOF,
 	restoreLexer,
-	strictAdvanceToEOF,
+	safeAdvanceToEOF,
 	snapshotLexer,
+	strictAdvanceToEOF,
 } from "./lexer";
 import { splitLines } from "./lib/split-lines";
 import { substring } from "./lib/substring";
@@ -52,7 +53,7 @@ export class ExtendedParser extends Parser {
 	protected _landmarks: Landmark[];
 
 	constructor(source: string | Source, options: ParseOptions = {}) {
-		source = typeof source === "string" ? new Source(source) : source;
+		source = isSource(source) ? source : new Source(source);
 
 		super(source, options);
 
@@ -61,20 +62,24 @@ export class ExtendedParser extends Parser {
 	}
 
 	parseExtendedDocument(): ExtendedDocumentNode {
-		const definitions: SectionNode[] = this.zeroToMany(
+		const sections: SectionNode[] = this.zeroToMany(
 			TokenKind.SOF,
 			this.parseSection,
 			TokenKind.EOF
 		);
-		const sections = insertWhitespace(
+
+		const withDocumentComments = processDocumentComments(
 			this._lexer.source,
-			this._lines,
-			definitions
+			sections,
+			this._lines
+		);
+		const withSectionComments = withDocumentComments.map((section) =>
+			processSectionComments(this._lexer.source, section)
 		);
 
 		return {
 			kind: "ExtendedDocument",
-			sections,
+			sections: withSectionComments,
 		};
 	}
 

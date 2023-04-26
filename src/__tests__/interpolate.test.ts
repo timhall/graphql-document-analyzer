@@ -57,22 +57,19 @@ subscription { g { }
 		withoutLoc(document.sections[0])
 	);
 	expect(withoutLoc(interpolated.sections[1])).toEqual(
-		withoutLoc(document.sections[1])
+		withoutLoc(reference.sections[1])
 	);
 	expect(withoutLoc(interpolated.sections[2])).toEqual(
 		withoutLoc(reference.sections[2])
 	);
 	expect(withoutLoc(interpolated.sections[3])).toEqual(
-		withoutLoc(reference.sections[3])
+		withoutLoc(document.sections[3])
 	);
 	expect(withoutLoc(interpolated.sections[4])).toEqual(
 		withoutLoc(document.sections[4])
 	);
 	expect(withoutLoc(interpolated.sections[5])).toEqual(
-		withoutLoc(document.sections[5])
-	);
-	expect(withoutLoc(interpolated.sections[6])).toEqual(
-		withoutLoc(reference.sections[6])
+		withoutLoc(reference.sections[5])
 	);
 });
 
@@ -91,7 +88,7 @@ query A {
 `);
 	const interpolated = interpolate(document, reference);
 
-	expect(interpolated.sections[1].loc).toEqual(document.sections[1].loc);
+	expect(interpolated.sections[0].loc).toEqual(document.sections[0].loc);
 });
 
 function withoutLoc(value: ExtendedASTNode): ExtendedASTNode {

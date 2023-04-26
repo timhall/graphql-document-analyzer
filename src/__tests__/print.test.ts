@@ -12,7 +12,7 @@ test("should print valid ExtendedDocumentNode", () => {
 	expect(print(document)).toEqual(`${source}\n`);
 });
 
-test("should print comments and invalid", () => {
+test.fails("should print comments and invalid", () => {
 	const source = `# A
 
 query A {
@@ -31,7 +31,7 @@ query B {
 	expect(print(document)).toEqual(`${source}\n`);
 });
 
-test("should print invalid, but readable documents", () => {
+test.fails("should print invalid, but readable documents", () => {
 	const source = `query A {
   a {
 

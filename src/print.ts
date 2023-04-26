@@ -25,7 +25,6 @@ export function print(ast: ASTNode | ExtendedDocumentNode): string {
 	const output = [];
 	for (const section of ast.sections) {
 		if (
-			section.kind === "Ignored" ||
 			section.kind === "Invalid" ||
 			section.kind === "InvalidOperationDefinition" ||
 			section.kind === "InvalidFragmentDefinition"

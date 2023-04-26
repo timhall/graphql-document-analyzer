@@ -1,4 +1,5 @@
 import {
+	ASTKindToNode,
 	ASTNode,
 	DefinitionNode,
 	Location,
@@ -9,22 +10,25 @@ import {
 	Token,
 } from "graphql";
 import { isRecord } from "./lib/is-record";
+import { splitLines } from "./lib/split-lines";
 import { substring } from "./lib/substring";
+import { isDefined } from "./lib/is-defined";
 
 export type ExtendedASTNode =
-	| ASTNode
+	| (ASTNode & { comments?: Comments })
 	| ExtendedDocumentNode
 	| InvalidOperationDefinitionNode
 	| InvalidFragmentDefinitionNode
 	| InvalidNode
-	| IgnoredNode;
+	| CommentNode;
 
-export interface ExtendedASTKindToNode {
+export type ExtendedASTKindToNode = ASTKindToNode & {
 	ExtendedDocument: ExtendedDocumentNode;
 	InvalidOperationDefinition: InvalidOperationDefinitionNode;
 	InvalidFragmentDefinition: InvalidFragmentDefinitionNode;
-	Ignored: IgnoredNode;
-}
+	Invalid: InvalidNode;
+	Comment: CommentNode;
+};
 
 export function isExtendedNode(
 	node: unknown
@@ -33,14 +37,14 @@ export function isExtendedNode(
 	| InvalidOperationDefinitionNode
 	| InvalidFragmentDefinitionNode
 	| InvalidNode
-	| IgnoredNode {
+	| CommentNode {
 	return (
 		isRecord(node) &&
 		(node.kind === "ExtendedDocument" ||
 			node.kind === "InvalidOperationDefinition" ||
 			node.kind === "InvalidFragmentDefinition" ||
 			node.kind === "Invalid" ||
-			node.kind === "Ignored")
+			node.kind === "Comment")
 	);
 }
 
@@ -49,7 +53,7 @@ export function isExtendedNode(
  */
 export interface ExtendedDocumentNode {
 	readonly kind: "ExtendedDocument";
-	readonly loc?: Location | undefined;
+	readonly loc?: Location;
 	readonly sections: ReadonlyArray<SectionNode>;
 }
 
@@ -60,10 +64,9 @@ export function isExtendedDocumentNode(
 }
 
 export type SectionNode =
-	| DefinitionNode
+	| (DefinitionNode & { comments?: Comments })
 	| InvalidDefinitionNode
-	| InvalidNode
-	| IgnoredNode;
+	| InvalidNode;
 
 export type InvalidDefinitionNode =
 	| InvalidOperationDefinitionNode
@@ -71,9 +74,10 @@ export type InvalidDefinitionNode =
 
 export interface InvalidOperationDefinitionNode {
 	readonly kind: "InvalidOperationDefinition";
-	readonly loc?: Location | undefined;
+	readonly loc?: Location;
+	readonly comments?: Comments;
 	readonly operation: OperationTypeNode;
-	readonly name?: NameNode | undefined;
+	readonly name?: NameNode;
 	readonly value: string;
 }
 
@@ -83,7 +87,7 @@ export function invalidOperationDefinition(
 	name: string | undefined,
 	start: Token,
 	end: Token
-): InvalidOperationDefinitionNode {
+): InvalidOperationDefinitionNode & { loc: Location } {
 	const loc = new Location(start, end, source);
 
 	return {
@@ -99,20 +103,14 @@ export function invalidShorthandOperationDefinition(
 	source: Source,
 	start: Token,
 	end: Token
-): InvalidOperationDefinitionNode {
-	const loc = new Location(start, end, source);
-
-	return {
-		kind: "InvalidOperationDefinition",
-		operation: "query",
-		value: substring(source, loc),
-		loc,
-	};
+): InvalidOperationDefinitionNode & { loc: Location } {
+	return invalidOperationDefinition(source, "query", undefined, start, end);
 }
 
 export interface InvalidFragmentDefinitionNode {
 	readonly kind: "InvalidFragmentDefinition";
-	readonly loc?: Location | undefined;
+	readonly loc?: Location;
+	readonly comments?: Comments;
 	readonly name: NameNode;
 	readonly typeCondition: NamedTypeNode;
 	readonly value: string;
@@ -124,7 +122,7 @@ export function invalidFragment(
 	typeCondition: string,
 	start: Token,
 	end: Token
-): InvalidFragmentDefinitionNode {
+): InvalidFragmentDefinitionNode & { loc: Location } {
 	const loc = new Location(start, end, source);
 
 	return {
@@ -141,22 +139,45 @@ export function invalidFragment(
 
 export interface InvalidNode {
 	readonly kind: "Invalid";
-	readonly loc?: Location | undefined;
+	readonly loc?: Location;
+	readonly comments?: Comments;
 	readonly value: string;
 }
 
-export function invalid(source: Source, start: Token, end: Token): InvalidNode {
+export function invalid(
+	source: Source,
+	start: Token,
+	end: Token
+): InvalidNode & { loc: Location } {
 	const loc = new Location(start, end, source);
 	return { kind: "Invalid", value: substring(source, loc), loc };
 }
 
-export interface IgnoredNode {
-	readonly kind: "Ignored";
-	readonly loc?: Location | undefined;
+export interface CommentNode {
+	readonly kind: "Comment";
+	readonly loc?: Location;
 	readonly value: string;
 }
 
-export function ignored(source: Source, start: Token, end: Token): IgnoredNode {
+export interface Comments {
+	before: CommentNode[];
+	after: CommentNode[];
+}
+
+export function comment(
+	source: Source,
+	start: Token,
+	end: Token
+): CommentNode & { loc: Location } {
 	const loc = new Location(start, end, source);
-	return { kind: "Ignored", value: substring(source, loc), loc };
+
+	const raw = substring(source, loc);
+	const lines = splitLines(raw)
+		.map((line) => line.value?.trim())
+		.filter(isDefined)
+		.map((line) => (line?.startsWith("#") ? line.substring(1) : line));
+
+	const value = lines.join("\n");
+
+	return { kind: "Comment", value, loc };
 }
