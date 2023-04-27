@@ -7,7 +7,7 @@ import {
 	print as graphqlPrint,
 	visit,
 } from "graphql";
-import type { ExtendedDocumentNode } from "./extended-ast";
+import type { CommentNode, ExtendedDocumentNode } from "./extended-ast";
 import { isExtendedDocumentNode } from "./extended-ast";
 import {
 	ensureTrailingNewline,
@@ -33,7 +33,12 @@ export function print(ast: ASTNode | ExtendedDocumentNode): string {
 			continue;
 		}
 
-		output.push(resilientPrint(section));
+		const before = section.comments?.before.map(printComment).join("\n\n");
+		const after = section.comments?.after.map(printComment).join("\n\n");
+
+		output.push(
+			[before, resilientPrint(section), after].filter(Boolean).join("\n")
+		);
 	}
 
 	return ensureTrailingNewline(output.join("\n"));
@@ -104,4 +109,11 @@ function resilientPrint(node: DocumentNode | DefinitionNode): string {
 	);
 
 	return value;
+}
+
+function printComment(comment: CommentNode): string {
+	return comment.value
+		.split("\n")
+		.map((line) => `# ${line}`)
+		.join("\n");
 }
