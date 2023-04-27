@@ -12,7 +12,7 @@ import {
 } from "graphql";
 import { Parser } from "graphql/language/parser";
 import { isSource } from "graphql/language/source";
-import { processDocumentComments, processSectionComments } from "./comments";
+import { processComments, processSectionComments } from "./comments";
 import {
 	ExtendedDocumentNode,
 	InvalidFragmentDefinitionNode,
@@ -68,13 +68,13 @@ export class ExtendedParser extends Parser {
 			TokenKind.EOF
 		);
 
-		const withDocumentComments = processDocumentComments(
+		const withDocumentComments = processComments(
 			this._lexer.source,
 			sections,
 			this._lines
 		);
 		const withSectionComments = withDocumentComments.map((section) =>
-			processSectionComments(this._lexer.source, section)
+			processSectionComments(this._lexer.source, section, this._lines)
 		);
 
 		return {
