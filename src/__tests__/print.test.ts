@@ -105,3 +105,12 @@ test("should print selection comments", () => {
 
 	expect(print(document)).toEqual(`${source}\n`);
 });
+
+test("should print variables and directives", () => {
+	const source = `query A($id: ID!, $b: [String!]!) @a @b(message: "...") {
+  a
+}`;
+	const document = analyze(source);
+
+	expect(print(document)).toEqual(`${source}\n`);
+});

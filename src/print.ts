@@ -37,8 +37,17 @@ function printSectionWithComments(section: SectionNode): string {
 	const output = visit(section, {
 		OperationDefinition: {
 			leave(node) {
+				const variables = node.variableDefinitions
+					?.map((definition) => graphqlPrint(definition))
+					.join(", ");
+				const directives = node.directives
+					?.map((directive) => graphqlPrint(directive))
+					.join(" ");
+
 				return node.name
-					? `${node.operation} ${node.name.value} ${node.selectionSet}`
+					? `${node.operation} ${node.name.value}${
+							variables ? `(${variables})` : ""
+					  }${directives ? ` ${directives}` : ""} ${node.selectionSet}`
 					: `${node.selectionSet}`;
 			},
 		},
