@@ -24,18 +24,19 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
-		"@tsconfig/node12": "^1.0.11",
-		"@types/node": "^18.16.1",
+		"@tsconfig/node16": "^1.0.3",
+		"@types/node": "^16.18.28",
 		"graphql": "^15.8.0",
 		"prettier": "^2.8.8",
 		"tsup": "^6.7.0",
 		"typescript": "^5.0.4",
-		"vitest": "^0.30.1"
+		"vitest": "^0.31.0"
 	},
 	"peerDependencies": {
 		"graphql": "^15"
 	},
 	"files": [
 		"dist"
-	]
+	],
+	"dependencies": {}
 }
