@@ -235,7 +235,7 @@ export function attachComments(
 
 			return {
 				...node,
-				sections: node.sections,
+				definitions: node.definitions,
 			};
 		},
 	});
@@ -245,7 +245,7 @@ function isTopLevel(
 	document: ExtendedDocumentNode
 ): (comment: CommentNode) => boolean {
 	return (comment: CommentNode) => {
-		return document.sections.some((section) => {
+		return document.definitions.some((section) => {
 			if (!comment.loc || !section.loc) return false;
 
 			const isInside =

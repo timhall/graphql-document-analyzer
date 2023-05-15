@@ -20,7 +20,7 @@ test("should parse comment sections", () => {
 # C
 `);
 
-	expect(document.sections.length).toBe(0);
+	expect(document.definitions.length).toBe(0);
 });
 
 test("should parse operations", () => {
@@ -34,7 +34,7 @@ query B {
 }
 `);
 
-	expect(document.sections.length).toBe(2);
+	expect(document.definitions.length).toBe(2);
 });
 
 test("should parse invalid operations", () => {
@@ -52,9 +52,9 @@ query C {
 }
 `);
 
-	expect(document.sections.length).toBe(3);
-	expect(document.sections[1].kind).toBe("OperationDefinition");
-	expect((document.sections[1] as OperationDefinitionNode).name?.value).toBe(
+	expect(document.definitions.length).toBe(3);
+	expect(document.definitions[1].kind).toBe("OperationDefinition");
+	expect((document.definitions[1] as OperationDefinitionNode).name?.value).toBe(
 		"B"
 	);
 });
@@ -79,30 +79,30 @@ subscription {
 `);
 
 	expect(
-		(document.sections[0] as InvalidOperationDefinitionNode).operation
+		(document.definitions[0] as InvalidOperationDefinitionNode).operation
 	).toBe("query");
 	expect(
-		(document.sections[0] as InvalidOperationDefinitionNode).name?.value
+		(document.definitions[0] as InvalidOperationDefinitionNode).name?.value
 	).toBe("A");
 
 	expect(
-		(document.sections[1] as InvalidOperationDefinitionNode).operation
+		(document.definitions[1] as InvalidOperationDefinitionNode).operation
 	).toBe("query");
-	expect((document.sections[1] as InvalidOperationDefinitionNode).name).toBe(
+	expect((document.definitions[1] as InvalidOperationDefinitionNode).name).toBe(
 		undefined
 	);
 
 	expect(
-		(document.sections[2] as InvalidOperationDefinitionNode).operation
+		(document.definitions[2] as InvalidOperationDefinitionNode).operation
 	).toBe("mutation");
 	expect(
-		(document.sections[2] as InvalidOperationDefinitionNode).name?.value
+		(document.definitions[2] as InvalidOperationDefinitionNode).name?.value
 	).toBe("D");
 
 	expect(
-		(document.sections[3] as InvalidOperationDefinitionNode).operation
+		(document.definitions[3] as InvalidOperationDefinitionNode).operation
 	).toBe("subscription");
-	expect((document.sections[3] as InvalidOperationDefinitionNode).name).toBe(
+	expect((document.definitions[3] as InvalidOperationDefinitionNode).name).toBe(
 		undefined
 	);
 });
@@ -115,7 +115,7 @@ fragment F on G {
 `);
 
 	expect(
-		(document.sections[0] as InvalidFragmentDefinitionNode).name.value
+		(document.definitions[0] as InvalidFragmentDefinitionNode).name.value
 	).toBe("F");
 });
 
@@ -128,8 +128,8 @@ query A {
 }
 `);
 
-	expect(document.sections.length).toBe(1);
-	expect((document.sections[0] as OperationDefinitionNode).name?.value).toBe(
+	expect(document.definitions.length).toBe(1);
+	expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
 		"A"
 	);
 });
@@ -137,8 +137,8 @@ query A {
 test("should analyze single line operation", () => {
 	const document = analyze("query A { a }");
 
-	expect(document.sections.length).toBe(1);
-	expect((document.sections[0] as OperationDefinitionNode).name?.value).toBe(
+	expect(document.definitions.length).toBe(1);
+	expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
 		"A"
 	);
 });
@@ -146,8 +146,10 @@ test("should analyze single line operation", () => {
 test("should analyze single line fragment", () => {
 	const document = analyze("fragment B on C { d }");
 
-	expect(document.sections.length).toBe(1);
-	expect((document.sections[0] as FragmentDefinitionNode).name.value).toBe("B");
+	expect(document.definitions.length).toBe(1);
+	expect((document.definitions[0] as FragmentDefinitionNode).name.value).toBe(
+		"B"
+	);
 });
 
 test("should analyze query with variables", () => {
@@ -165,23 +167,23 @@ query C($id: ID!) {
 }
   `);
 
-	expect(document.sections.length).toBe(2);
-	expect(document.sections[0].kind).toBe("OperationDefinition");
-	expect((document.sections[0] as OperationDefinitionNode).name?.value).toBe(
+	expect(document.definitions.length).toBe(2);
+	expect(document.definitions[0].kind).toBe("OperationDefinition");
+	expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
 		"A"
 	);
 
-	expect(document.sections[1].kind).toBe("InvalidOperationDefinition");
+	expect(document.definitions[1].kind).toBe("InvalidOperationDefinition");
 	expect(
-		(document.sections[1] as InvalidOperationDefinitionNode).name?.value
+		(document.definitions[1] as InvalidOperationDefinitionNode).name?.value
 	).toBe("C");
 });
 
 test("should analyze query with /r/n line endings", () => {
 	const document = analyze("query A {\r\n\ta {\r\n\t\tid\r\n\t}\r\n}\n");
 
-	expect(document.sections.length).toBe(1);
-	expect(document.sections[0].kind).toBe("OperationDefinition");
+	expect(document.definitions.length).toBe(1);
+	expect(document.definitions[0].kind).toBe("OperationDefinition");
 });
 
 test("should analyze with top-level curlies", () => {
@@ -225,10 +227,10 @@ query A {
 }
 `);
 
-	expect(document.sections.length).toBe(1);
-	expect(document.sections[0].kind).toBe("OperationDefinition");
+	expect(document.definitions.length).toBe(1);
+	expect(document.definitions[0].kind).toBe("OperationDefinition");
 
-	const selections = (document.sections[0] as OperationDefinitionNode)
+	const selections = (document.definitions[0] as OperationDefinitionNode)
 		.selectionSet.selections as Array<SelectionNode & { comments?: Comments }>;
 	expect(selections[0].comments?.before[0]?.value).toBe(" a");
 	expect(selections[0].comments?.after.length).toBe(0);
@@ -276,28 +278,28 @@ fragment C on D {
 
 		const document = parser.parseExtendedDocument();
 
-		expect(document.sections.length).toBe(5);
+		expect(document.definitions.length).toBe(5);
 
-		expect(document.sections[0].kind).toBe("InvalidOperationDefinition");
-		expect((document.sections[0] as InvalidOperationDefinitionNode).value).toBe(
-			"{\na {\nb\n}"
-		);
-		expect(document.sections[0].comments?.before[0]?.value).toBe(" leading");
+		expect(document.definitions[0].kind).toBe("InvalidOperationDefinition");
+		expect(
+			(document.definitions[0] as InvalidOperationDefinitionNode).value
+		).toBe("{\na {\nb\n}");
+		expect(document.definitions[0].comments?.before[0]?.value).toBe(" leading");
 
-		expect(document.sections[1].kind).toBe("InvalidOperationDefinition");
-		expect((document.sections[1] as InvalidOperationDefinitionNode).value).toBe(
-			"query A {\t\na {\nb\n}\n}\n# comment\n\n# another\n{"
-		);
+		expect(document.definitions[1].kind).toBe("InvalidOperationDefinition");
+		expect(
+			(document.definitions[1] as InvalidOperationDefinitionNode).value
+		).toBe("query A {\t\na {\nb\n}\n}\n# comment\n\n# another\n{");
 
-		expect(document.sections[2].kind).toBe("OperationDefinition");
+		expect(document.definitions[2].kind).toBe("OperationDefinition");
 
-		expect(document.sections[3].kind).toBe("InvalidFragmentDefinition");
-		expect((document.sections[3] as InvalidFragmentDefinitionNode).value).toBe(
-			"fragment A on B {\n}\n}"
-		);
+		expect(document.definitions[3].kind).toBe("InvalidFragmentDefinition");
+		expect(
+			(document.definitions[3] as InvalidFragmentDefinitionNode).value
+		).toBe("fragment A on B {\n}\n}");
 
-		expect(document.sections[4].kind).toBe("FragmentDefinition");
-		expect(document.sections[4].comments?.after[0]?.value).toBe(" trailing");
+		expect(document.definitions[4].kind).toBe("FragmentDefinition");
+		expect(document.definitions[4].comments?.after[0]?.value).toBe(" trailing");
 	});
 
 	test("should parse odd indentation", () => {
@@ -333,8 +335,8 @@ fragment C on D {
 	`);
 
 		const document = parser.parseExtendedDocument();
-		expect(document.sections.length).toBe(3);
-		expect(document.sections[0].kind).toBe("OperationDefinition");
+		expect(document.definitions.length).toBe(3);
+		expect(document.definitions[0].kind).toBe("OperationDefinition");
 	});
 
 	test("should handle syntax errors", () => {
@@ -345,10 +347,10 @@ fragment C on D {
 		const parser = new ExtendedParser(source);
 
 		const document = parser.parseExtendedDocument();
-		expect(document.sections.length).toBe(1);
-		expect(document.sections[0].kind).toBe("InvalidOperationDefinition");
-		expect((document.sections[0] as InvalidOperationDefinitionNode).value).toBe(
-			source
-		);
+		expect(document.definitions.length).toBe(1);
+		expect(document.definitions[0].kind).toBe("InvalidOperationDefinition");
+		expect(
+			(document.definitions[0] as InvalidOperationDefinitionNode).value
+		).toBe(source);
 	});
 });

@@ -79,7 +79,7 @@ export class ExtendedParser extends Parser {
 
 		return {
 			kind: "ExtendedDocument",
-			sections: withSectionComments,
+			definitions: withSectionComments,
 		};
 	}
 

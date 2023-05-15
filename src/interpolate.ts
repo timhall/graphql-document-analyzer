@@ -21,12 +21,12 @@ export function interpolate(
 	document: ExtendedDocumentNode,
 	reference: ExtendedDocumentNode
 ): ExtendedDocumentNode {
-	const documentOutline = document.sections.filter(isRelevant);
-	const referenceOutline = reference.sections.filter(isRelevant);
+	const documentOutline = document.definitions.filter(isRelevant);
+	const referenceOutline = reference.definitions.filter(isRelevant);
 
 	if (documentOutline.length !== referenceOutline.length) return document;
 
-	const sections = document.sections.map((section) => {
+	const sections = document.definitions.map((section) => {
 		if (section.kind === "InvalidOperationDefinition") {
 			const index = documentOutline.indexOf(section);
 			const isAnonymous = !section.name;
@@ -49,7 +49,7 @@ export function interpolate(
 		return section;
 	});
 
-	return { kind: "ExtendedDocument", sections };
+	return { kind: "ExtendedDocument", definitions: sections };
 }
 
 type RelevantNode =

@@ -56,7 +56,7 @@ export function isExtendedNode(
 export interface ExtendedDocumentNode {
 	readonly kind: "ExtendedDocument";
 	readonly loc?: Location;
-	readonly sections: ReadonlyArray<SectionNode>;
+	readonly definitions: ReadonlyArray<SectionNode>;
 }
 
 export function isExtendedDocumentNode(

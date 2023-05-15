@@ -6,7 +6,7 @@ import { ExtendedASTNode, ExtendedASTKindToNode } from "./extended-ast";
 export const ExtendedQueryDocumentKeys: VisitorKeyMap<ExtendedASTKindToNode> = {
 	...QueryDocumentKeys,
 	Comment: [],
-	ExtendedDocument: ["sections"],
+	ExtendedDocument: ["definitions"],
 	Invalid: [],
 	InvalidOperationDefinition: [],
 	InvalidFragmentDefinition: [],

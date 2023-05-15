@@ -19,7 +19,7 @@ export function print(ast: ASTNode | ExtendedDocumentNode): string {
 	}
 
 	const output = [];
-	for (const section of ast.sections) {
+	for (const section of ast.definitions) {
 		const value =
 			section.kind === "Invalid" ||
 			section.kind === "InvalidOperationDefinition" ||

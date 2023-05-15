@@ -75,15 +75,15 @@ test("should edit sections on enter", () => {
 		ExtendedDocument(node) {
 			return {
 				...node,
-				sections: [...node.sections, added],
+				definitions: [...node.definitions, added],
 			};
 		},
 		InvalidOperationDefinition: record("InvalidOperationDefinition"),
 	});
 
 	expect(isExtendedDocumentNode(fnResult)).toBe(true);
-	expect(fnResult.sections.length).toBe(5);
-	expect(fnResult.sections[4]).toBe(added);
+	expect(fnResult.definitions.length).toBe(5);
+	expect(fnResult.definitions[4]).toBe(added);
 	expect(entered.length).toBe(2);
 
 	const enterResult = visit(document, {
@@ -91,7 +91,7 @@ test("should edit sections on enter", () => {
 			enter(node) {
 				return {
 					...node,
-					sections: [...node.sections, added],
+					definitions: [...node.definitions, added],
 				};
 			},
 		},
@@ -99,8 +99,8 @@ test("should edit sections on enter", () => {
 	});
 
 	expect(isExtendedDocumentNode(enterResult)).toBe(true);
-	expect(enterResult.sections.length).toBe(5);
-	expect(enterResult.sections[4]).toBe(added);
+	expect(enterResult.definitions.length).toBe(5);
+	expect(enterResult.definitions[4]).toBe(added);
 	expect(entered.length).toBe(4);
 });
 
@@ -117,7 +117,7 @@ test("should edit sections on leave", () => {
 			leave(node) {
 				return {
 					...node,
-					sections: [...node.sections, added],
+					definitions: [...node.definitions, added],
 				};
 			},
 		},
@@ -125,8 +125,8 @@ test("should edit sections on leave", () => {
 	});
 
 	expect(isExtendedDocumentNode(leaveResult)).toBe(true);
-	expect(leaveResult.sections.length).toBe(5);
-	expect(leaveResult.sections[4]).toBe(added);
+	expect(leaveResult.definitions.length).toBe(5);
+	expect(leaveResult.definitions[4]).toBe(added);
 	expect(entered.length).toBe(1);
 });
 
@@ -155,14 +155,16 @@ test("should map sections", () => {
 	});
 
 	expect(isExtendedDocumentNode(result)).toBe(true);
-	expect((document.sections[0] as InvalidOperationDefinitionNode).value).toBe(
-		"query B {\n  c {\n}"
-	);
-	expect(result.sections[0].value).toBe("query B {\n  c {\n} (entered) (left)");
 	expect(
-		(document.sections[2] as InvalidFragmentDefinitionNode).name.value
+		(document.definitions[0] as InvalidOperationDefinitionNode).value
+	).toBe("query B {\n  c {\n}");
+	expect(result.definitions[0].value).toBe(
+		"query B {\n  c {\n} (entered) (left)"
+	);
+	expect(
+		(document.definitions[2] as InvalidFragmentDefinitionNode).name.value
 	).toBe("F");
-	expect(result.sections[2].name.value).toBe("InvalidF");
+	expect(result.definitions[2].name.value).toBe("InvalidF");
 });
 
 test("should replace operations", () => {
@@ -178,5 +180,5 @@ test("should replace operations", () => {
 	});
 
 	expect(isExtendedDocumentNode(result)).toBe(true);
-	expect(result.sections[1]).toBe(replacement);
+	expect(result.definitions[1]).toBe(replacement);
 });
