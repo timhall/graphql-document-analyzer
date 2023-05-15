@@ -128,8 +128,8 @@ function printWithComments(
 	value: string,
 	comments: Comments | undefined
 ): string {
-	const before = comments?.before.map(printComment).join("\n\n");
-	const after = comments?.after.map(printComment).join("\n\n");
+	const before = comments?.preceding?.map(printComment).join("\n\n");
+	const after = comments?.following?.map(printComment).join("\n\n");
 
 	return [before, value, after].filter(Boolean).join("\n");
 }

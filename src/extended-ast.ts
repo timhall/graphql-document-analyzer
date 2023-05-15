@@ -13,9 +13,10 @@ import { isDefined } from "./lib/is-defined";
 import { isRecord } from "./lib/is-record";
 import { splitLines } from "./lib/split-lines";
 import { substring } from "./lib/substring";
+import { ErrorWithLoc } from "./lib/error-with-loc";
 
 export type ExtendedASTNode =
-	| (ASTNode & { comments?: Comments })
+	| (ASTNode & { comments?: Comments; errors?: ErrorWithLoc[] })
 	| ExtendedDocumentNode
 	| InvalidOperationDefinitionNode
 	| InvalidFragmentDefinitionNode
@@ -23,7 +24,10 @@ export type ExtendedASTNode =
 	| CommentNode;
 
 export type ExtendedASTKindToNode = {
-	[Key in keyof ASTKindToNode]: ASTKindToNode[Key] & { comments?: Comments };
+	[Key in keyof ASTKindToNode]: ASTKindToNode[Key] & {
+		comments?: Comments;
+		errors?: ErrorWithLoc[];
+	};
 } & {
 	ExtendedDocument: ExtendedDocumentNode;
 	InvalidOperationDefinition: InvalidOperationDefinitionNode;
@@ -155,15 +159,39 @@ export function invalid(
 	return { kind: "Invalid", value: substring(source, loc), loc };
 }
 
+//
+// Comments
+//
+
+/**
+ * Semantic positions of comments relative to a Node
+ *
+ * @example
+ * ```graphql
+ * # [preceding]
+ *
+ * # leading
+ * a {
+ *   # [inside]
+ * } # inline
+ * # trailing
+ *
+ * # [following]
+ * ```
+ */
+export interface Comments {
+	preceding?: CommentNode[];
+	leading?: CommentNode;
+	inside?: CommentNode[];
+	inline?: CommentNode;
+	trailing?: CommentNode;
+	following?: CommentNode[];
+}
+
 export interface CommentNode {
 	readonly kind: "Comment";
 	readonly loc?: Location;
 	readonly value: string;
-}
-
-export interface Comments {
-	before: CommentNode[];
-	after: CommentNode[];
 }
 
 export function comment(

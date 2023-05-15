@@ -49,9 +49,17 @@ export function processComments<TNode extends ExtendedASTNode>(
 	//    b. If a comment is after last node, add to after of last node
 	//    c. If a comment is adjacent to previous node, add to after of previous node
 	//    d. Otherwise, add to before of next node
-	const groupedByNode: Map<ExtendedASTNode, Comments> = new Map();
-	const ensureComments = (section: ExtendedASTNode): Comments => {
-		const value = groupedByNode.get(section) ?? { before: [], after: [] };
+	const groupedByNode: Map<
+		ExtendedASTNode,
+		Comments & { preceding: CommentNode[]; following: CommentNode[] }
+	> = new Map();
+	const ensureComments = (
+		section: ExtendedASTNode
+	): Comments & { preceding: CommentNode[]; following: CommentNode[] } => {
+		const value = groupedByNode.get(section) ?? {
+			preceding: [],
+			following: [],
+		};
 		if (!groupedByNode.has(section)) groupedByNode.set(section, value);
 
 		return value;
@@ -79,16 +87,16 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 		if (after && !before) {
 			// a.
-			ensureComments(after).before.push(comment);
+			ensureComments(after).preceding.push(comment);
 		} else if (before && !after) {
 			// b.
-			ensureComments(before).after.push(comment);
+			ensureComments(before).following.push(comment);
 		} else if (before?.loc && adjacent(before.loc, comment.loc)) {
 			// c.
-			ensureComments(before).after.push(comment);
+			ensureComments(before).following.push(comment);
 		} else if (after) {
 			// d.
-			ensureComments(after).before.push(comment);
+			ensureComments(after).preceding.push(comment);
 		}
 	}
 
