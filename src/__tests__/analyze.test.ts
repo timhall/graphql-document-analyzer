@@ -5,11 +5,8 @@ import {
 } from "graphql";
 import { describe, expect, test } from "vitest";
 import { analyze, ExtendedParser } from "../analyze";
-import {
-	Comments,
-	InvalidFragmentDefinitionNode,
-	InvalidOperationDefinitionNode,
-} from "../extended-ast";
+import { Comments, Extended } from "../extended-ast";
+import { substring } from "../lib/substring";
 
 test("should parse comment sections", () => {
 	const document = analyze(`
@@ -173,10 +170,10 @@ query C($id: ID!) {
 		"A"
 	);
 
-	expect(document.definitions[1].kind).toBe("InvalidOperationDefinition");
-	expect(
-		(document.definitions[1] as InvalidOperationDefinitionNode).name?.value
-	).toBe("C");
+	expect(document.definitions[1].kind).toBe("OperationDefinition");
+	expect((document.definitions[1] as OperationDefinitionNode).name?.value).toBe(
+		"C"
+	);
 });
 
 test("should analyze query with /r/n line endings", () => {
@@ -232,13 +229,13 @@ query A {
 
 	const selections = (document.definitions[0] as OperationDefinitionNode)
 		.selectionSet.selections as Array<SelectionNode & { comments?: Comments }>;
-	expect(selections[0].comments?.before[0]?.value).toBe(" a");
-	expect(selections[0].comments?.after.length).toBe(0);
-	expect(selections[1].comments?.before[0]?.value).toBe("b.before");
-	expect(selections[1].comments?.after[0]?.value).toBe("b.after");
-	expect(selections[2].comments?.before[0]?.value).toBe(" c.1");
-	expect(selections[2].comments?.before[1]?.value).toBe(" c.2");
-	expect(selections[2].comments?.after[0]?.value).toBe(" c.after");
+	expect(selections[0].comments?.preceding?.[0]?.value).toBe(" a");
+	expect(selections[0].comments?.following?.length).toBe(0);
+	expect(selections[1].comments?.preceding?.[0]?.value).toBe("b.before");
+	expect(selections[1].comments?.following?.[0]?.value).toBe("b.after");
+	expect(selections[2].comments?.preceding?.[0]?.value).toBe(" c.1");
+	expect(selections[2].comments?.preceding?.[1]?.value).toBe(" c.2");
+	expect(selections[2].comments?.following?.[0]?.value).toBe(" c.after");
 });
 
 describe("ResilientParser", () => {
@@ -280,26 +277,39 @@ fragment C on D {
 
 		expect(document.definitions.length).toBe(5);
 
-		expect(document.definitions[0].kind).toBe("InvalidOperationDefinition");
+		expect(document.definitions[0].kind).toBe("OperationDefinition");
 		expect(
-			(document.definitions[0] as InvalidOperationDefinitionNode).value
+			substring(
+				(document.definitions[0] as Extended<OperationDefinitionNode>)
+					.errors?.[0].loc
+			)
 		).toBe("{\na {\nb\n}");
-		expect(document.definitions[0].comments?.before[0]?.value).toBe(" leading");
+		expect(document.definitions[0].comments?.preceding?.[0]?.value).toBe(
+			" leading"
+		);
 
-		expect(document.definitions[1].kind).toBe("InvalidOperationDefinition");
+		expect(document.definitions[1].kind).toBe("OperationDefinition");
 		expect(
-			(document.definitions[1] as InvalidOperationDefinitionNode).value
+			substring(
+				(document.definitions[1] as Extended<OperationDefinitionNode>)
+					.errors?.[0].loc
+			)
 		).toBe("query A {\t\na {\nb\n}\n}\n# comment\n\n# another\n{");
 
 		expect(document.definitions[2].kind).toBe("OperationDefinition");
 
-		expect(document.definitions[3].kind).toBe("InvalidFragmentDefinition");
+		expect(document.definitions[3].kind).toBe("FragmentDefinition");
 		expect(
-			(document.definitions[3] as InvalidFragmentDefinitionNode).value
+			substring(
+				(document.definitions[3] as Extended<FragmentDefinitionNode>)
+					.errors?.[0].loc
+			)
 		).toBe("fragment A on B {\n}\n}");
 
 		expect(document.definitions[4].kind).toBe("FragmentDefinition");
-		expect(document.definitions[4].comments?.after[0]?.value).toBe(" trailing");
+		expect(document.definitions[4].comments?.following?.[0]?.value).toBe(
+			" trailing"
+		);
 	});
 
 	test("should parse odd indentation", () => {
@@ -348,9 +358,12 @@ fragment C on D {
 
 		const document = parser.parseExtendedDocument();
 		expect(document.definitions.length).toBe(1);
-		expect(document.definitions[0].kind).toBe("InvalidOperationDefinition");
+		expect(document.definitions[0].kind).toBe("OperationDefinition");
 		expect(
-			(document.definitions[0] as InvalidOperationDefinitionNode).value
+			substring(
+				(document.definitions[0] as Extended<OperationDefinitionNode>)
+					.errors?.[0].loc
+			)
 		).toBe(source);
 	});
 });

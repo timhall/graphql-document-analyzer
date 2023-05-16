@@ -1,5 +1,7 @@
-import { Location, Source } from "graphql";
+import { Location } from "graphql";
 
-export function substring(source: Source, location: Location): string {
-	return source.body.substring(location.start, location.end);
+export function substring(location?: Location): string {
+	return location
+		? location.source.body.substring(location.start, location.end)
+		: "";
 }

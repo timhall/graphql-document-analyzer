@@ -1,4 +1,6 @@
 import {
+	DefinitionNode,
+	DocumentNode,
 	FragmentDefinitionNode,
 	Kind,
 	Location,
@@ -14,11 +16,7 @@ import { Parser } from "graphql/language/parser";
 import { isSource } from "graphql/language/source";
 import { processComments, processSectionComments } from "./comments";
 import {
-	ExtendedDocumentNode,
-	InvalidFragmentDefinitionNode,
-	InvalidNode,
-	InvalidOperationDefinitionNode,
-	SectionNode,
+	Extended,
 	invalid,
 	invalidShorthandOperationDefinition,
 } from "./extended-ast";
@@ -39,11 +37,12 @@ import {
 } from "./lexer";
 import { splitLines } from "./lib/split-lines";
 import { substring } from "./lib/substring";
+import { ErrorWithLoc } from "./lib/error-with-loc";
 
 export function analyze(
 	source: string,
 	options?: ParseOptions
-): ExtendedDocumentNode {
+): Extended<DocumentNode> {
 	const parser = new ExtendedParser(source, options);
 	return parser.parseExtendedDocument();
 }
@@ -61,8 +60,8 @@ export class ExtendedParser extends Parser {
 		this._landmarks = findLandmarks(source, this._lines);
 	}
 
-	parseExtendedDocument(): ExtendedDocumentNode {
-		const sections: SectionNode[] = this.zeroToMany(
+	parseExtendedDocument(): Extended<DocumentNode> {
+		const sections: DefinitionNode[] = this.zeroToMany(
 			TokenKind.SOF,
 			this.parseSection,
 			TokenKind.EOF
@@ -78,12 +77,12 @@ export class ExtendedParser extends Parser {
 		);
 
 		return {
-			kind: "ExtendedDocument",
+			kind: "Document",
 			definitions: withSectionComments,
 		};
 	}
 
-	parseSection(): SectionNode {
+	parseSection(): DefinitionNode {
 		if (this.peek(TokenKind.NAME)) {
 			switch (this._lexer.token.value) {
 				case "query":
@@ -100,10 +99,7 @@ export class ExtendedParser extends Parser {
 		return this.parseInvalid();
 	}
 
-	tryParseOperationDefinition():
-		| OperationDefinitionNode
-		| InvalidOperationDefinitionNode
-		| InvalidNode {
+	tryParseOperationDefinition(): Extended<OperationDefinitionNode> {
 		const snapshot = snapshotLexer(this._lexer);
 		try {
 			const definition = this.parseOperationDefinition();
@@ -148,16 +144,15 @@ export class ExtendedParser extends Parser {
 
 			return {
 				...invalidOperation,
-				value: substring(this._lexer.source, loc),
+				errors: [new ErrorWithLoc("Invalid operation definition", { loc })],
 				loc,
 			};
 		}
 	}
 
 	tryParseFragmentDefinition():
-		| FragmentDefinitionNode
-		| InvalidFragmentDefinitionNode
-		| InvalidNode {
+		| Extended<FragmentDefinitionNode>
+		| Extended<OperationDefinitionNode> {
 		const snapshot = snapshotLexer(this._lexer);
 		try {
 			const fragment = this.parseFragmentDefinition();
@@ -198,13 +193,13 @@ export class ExtendedParser extends Parser {
 
 			return {
 				...invalidFragment,
-				value: substring(this._lexer.source, loc),
+				errors: [new ErrorWithLoc("Invalid fragment definition", { loc })],
 				loc,
 			};
 		}
 	}
 
-	parseInvalid(): InvalidNode {
+	parseInvalid(): Extended<OperationDefinitionNode> {
 		const start = this._lexer.token;
 		const next = findNextLandmark(this._landmarks, this._lexer.token.line + 1);
 

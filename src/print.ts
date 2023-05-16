@@ -1,39 +1,49 @@
-import { ASTNode, FieldNode, Kind, print as graphqlPrint } from "graphql";
-import type {
-	CommentNode,
-	Comments,
-	ExtendedDocumentNode,
-	SectionNode,
-} from "./extended-ast";
-import { isExtendedDocumentNode } from "./extended-ast";
+import {
+	ASTNode,
+	DefinitionNode,
+	FieldNode,
+	FragmentDefinitionNode,
+	Kind,
+	OperationDefinitionNode,
+	print as graphqlPrint,
+} from "graphql";
+import type { CommentNode, Comments, Extended } from "./extended-ast";
 import {
 	ensureTrailingNewline,
 	trimTrailingNewlines,
 } from "./lib/trailing-newline";
 import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 import { visit } from "./visit";
+import { substring } from "./lib/substring";
 
-export function print(ast: ASTNode | ExtendedDocumentNode): string {
-	if (!isExtendedDocumentNode(ast)) {
+export function print(ast: Extended<ASTNode>): string {
+	if (ast.kind !== "Document") {
 		return ensureTrailingNewline(resilientPrint(ast));
 	}
 
 	const output = [];
-	for (const section of ast.definitions) {
-		const value =
-			section.kind === "Invalid" ||
-			section.kind === "InvalidOperationDefinition" ||
-			section.kind === "InvalidFragmentDefinition"
-				? section.value
-				: printSectionWithComments(section);
+	for (const definition of ast.definitions as Array<Extended<DefinitionNode>>) {
+		if (
+			definition.kind !== "OperationDefinition" &&
+			definition.kind !== "FragmentDefinition"
+		) {
+			output.push(resilientPrint(definition));
+			continue;
+		}
 
-		output.push(printWithComments(value, section.comments));
+		const value = definition.errors?.length
+			? substring(definition.errors[0].loc)
+			: printSectionWithComments(definition);
+
+		output.push(printWithComments(value, definition.comments));
 	}
 
 	return ensureTrailingNewline(output.join("\n\n"));
 }
 
-function printSectionWithComments(section: SectionNode): string {
+function printSectionWithComments(
+	section: OperationDefinitionNode | FragmentDefinitionNode
+): string {
 	const output = visit(section, {
 		OperationDefinition: {
 			leave(node) {

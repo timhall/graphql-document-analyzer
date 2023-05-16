@@ -1,10 +1,7 @@
+import { FragmentDefinitionNode, OperationDefinitionNode } from "graphql";
 import { expect, test } from "vitest";
 import { analyze } from "../analyze";
-import {
-	InvalidFragmentDefinitionNode,
-	InvalidOperationDefinitionNode,
-	isExtendedDocumentNode,
-} from "../extended-ast";
+import { Extended } from "../extended-ast";
 import { visit } from "../visit";
 
 const document = analyze(`query B {
@@ -40,26 +37,24 @@ test("should visit document and sections", () => {
 	const { entered, left, record } = recorder();
 
 	visit(document, {
-		ExtendedDocument: record("ExtendedDocument"),
+		Document: record("Document"),
 		OperationDefinition: record("OperationDefinition"),
 		FragmentDefinition: record("FragmentDefinition"),
-		InvalidOperationDefinition: record("InvalidOperationDefinition"),
-		InvalidFragmentDefinition: record("InvalidFragmentDefinition"),
 	});
 
 	expect(entered).toEqual([
-		"ExtendedDocument",
-		"InvalidOperationDefinition",
+		"Document",
 		"OperationDefinition",
-		"InvalidFragmentDefinition",
+		"OperationDefinition",
+		"FragmentDefinition",
 		"FragmentDefinition",
 	]);
 	expect(left).toEqual([
-		"InvalidOperationDefinition",
 		"OperationDefinition",
-		"InvalidFragmentDefinition",
+		"OperationDefinition",
 		"FragmentDefinition",
-		"ExtendedDocument",
+		"FragmentDefinition",
+		"Document",
 	]);
 });
 
@@ -67,27 +62,25 @@ test("should edit sections on enter", () => {
 	const { entered, record } = recorder();
 
 	const added = {
-		kind: "InvalidOperationDefinition",
+		kind: "OperationDefinition",
 		operation: "query",
-		value: "{ todo }",
 	};
 	const fnResult = visit(document, {
-		ExtendedDocument(node) {
+		Document(node) {
 			return {
 				...node,
 				definitions: [...node.definitions, added],
 			};
 		},
-		InvalidOperationDefinition: record("InvalidOperationDefinition"),
+		OperationDefinition: record("OperationDefinition"),
 	});
 
-	expect(isExtendedDocumentNode(fnResult)).toBe(true);
 	expect(fnResult.definitions.length).toBe(5);
 	expect(fnResult.definitions[4]).toBe(added);
-	expect(entered.length).toBe(2);
+	expect(entered.length).toBe(3);
 
 	const enterResult = visit(document, {
-		ExtendedDocument: {
+		Document: {
 			enter(node) {
 				return {
 					...node,
@@ -95,25 +88,24 @@ test("should edit sections on enter", () => {
 				};
 			},
 		},
-		InvalidOperationDefinition: record("InvalidOperationDefinition"),
+		OperationDefinition: record("OperationDefinition"),
 	});
 
-	expect(isExtendedDocumentNode(enterResult)).toBe(true);
 	expect(enterResult.definitions.length).toBe(5);
 	expect(enterResult.definitions[4]).toBe(added);
-	expect(entered.length).toBe(4);
+	expect(entered.length).toBe(6);
 });
 
 test("should edit sections on leave", () => {
 	const { entered, record } = recorder();
 
 	const added = {
-		kind: "InvalidOperationDefinition",
+		kind: "OperationDefinition",
 		operation: "query",
 		value: "{ todo }",
 	};
 	const leaveResult = visit(document, {
-		ExtendedDocument: {
+		Document: {
 			leave(node) {
 				return {
 					...node,
@@ -121,50 +113,59 @@ test("should edit sections on leave", () => {
 				};
 			},
 		},
-		InvalidOperationDefinition: record("InvalidOperationDefinition"),
+		OperationDefinition: record("OperationDefinition"),
 	});
 
-	expect(isExtendedDocumentNode(leaveResult)).toBe(true);
 	expect(leaveResult.definitions.length).toBe(5);
 	expect(leaveResult.definitions[4]).toBe(added);
-	expect(entered.length).toBe(1);
+	expect(entered.length).toBe(2);
 });
 
 test("should map sections", () => {
 	const result = visit(document, {
-		InvalidOperationDefinition: {
+		OperationDefinition: {
 			enter(node) {
+				if (!node.errors?.length) return node;
+
 				return {
 					...node,
-					value: `${node.value} (entered)`,
+					name: {
+						kind: "Name",
+						value: `${node.name?.value ?? "(anonymous)"} (entered)`,
+					},
 				};
 			},
 			leave(node) {
 				return {
 					...node,
-					value: `${node.value} (left)`,
+					name: {
+						kind: "Name",
+						value: `${node.name?.value ?? "(anonymous)"} (left)`,
+					},
 				};
 			},
 		},
-		InvalidFragmentDefinition(node) {
+		FragmentDefinition(node) {
 			return {
 				...node,
-				name: { kind: "Name", value: `Invalid${node.name.value}` },
+				name: {
+					kind: "Name",
+					value: `${node.name.value} (mapped)`,
+				},
 			};
 		},
 	});
 
-	expect(isExtendedDocumentNode(result)).toBe(true);
 	expect(
-		(document.definitions[0] as InvalidOperationDefinitionNode).value
-	).toBe("query B {\n  c {\n}");
-	expect(result.definitions[0].value).toBe(
-		"query B {\n  c {\n} (entered) (left)"
+		(document.definitions[0] as Extended<OperationDefinitionNode>).name?.value
+	).toBe("B");
+	expect(
+		(result.definitions[0] as Extended<OperationDefinitionNode>).name?.value
+	).toBe("B (entered) (left)");
+	expect((document.definitions[2] as FragmentDefinitionNode).name.value).toBe(
+		"F"
 	);
-	expect(
-		(document.definitions[2] as InvalidFragmentDefinitionNode).name.value
-	).toBe("F");
-	expect(result.definitions[2].name.value).toBe("InvalidF");
+	expect(result.definitions[2].name.value).toBe("F (mapped)");
 });
 
 test("should replace operations", () => {
@@ -179,6 +180,6 @@ test("should replace operations", () => {
 		},
 	});
 
-	expect(isExtendedDocumentNode(result)).toBe(true);
+	expect(result.kind).toBe("Document");
 	expect(result.definitions[1]).toBe(replacement);
 });

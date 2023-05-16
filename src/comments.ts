@@ -1,10 +1,16 @@
-import { Location, Source, Token, TokenKind } from "graphql";
+import {
+	DefinitionNode,
+	DocumentNode,
+	Location,
+	Source,
+	Token,
+	TokenKind,
+} from "graphql";
 import {
 	CommentNode,
 	Comments,
+	Extended,
 	ExtendedASTNode,
-	ExtendedDocumentNode,
-	SectionNode,
 	comment,
 } from "./extended-ast";
 import { visit } from "./visit";
@@ -109,9 +115,9 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 export function processSectionComments(
 	source: Source,
-	section: SectionNode,
+	section: DefinitionNode,
 	lines: Token[]
-): SectionNode {
+): DefinitionNode {
 	if (
 		section.kind !== "OperationDefinition" &&
 		section.kind !== "FragmentDefinition"
@@ -187,8 +193,8 @@ function merge(
 
 export function attachComments(
 	source: Source,
-	document: ExtendedDocumentNode
-): ExtendedDocumentNode {
+	document: Extended<DocumentNode>
+): Extended<DocumentNode> {
 	if (!document.loc) return document;
 
 	// Find all comment nodes in the document
@@ -232,7 +238,7 @@ export function attachComments(
 	// 3. Leading comments are attached to the closest following node
 
 	return visit(document, {
-		ExtendedDocument(node) {
+		Document(node) {
 			if (!topLevelComments.length) return;
 
 			// console.log(
@@ -250,21 +256,21 @@ export function attachComments(
 }
 
 function isTopLevel(
-	document: ExtendedDocumentNode
+	document: Extended<DocumentNode>
 ): (comment: CommentNode) => boolean {
 	return (comment: CommentNode) => {
-		return document.definitions.some((section) => {
-			if (!comment.loc || !section.loc) return false;
+		return document.definitions.some((definition) => {
+			if (!comment.loc || !definition.loc) return false;
 
 			const isInside =
-				comment.loc.start >= section.loc.start &&
-				comment.loc.end <= section.loc.end;
+				comment.loc.start >= definition.loc.start &&
+				comment.loc.end <= definition.loc.end;
 			const isLeading = isAdjacent(
 				comment.loc.endToken,
-				section.loc.startToken
+				definition.loc.startToken
 			);
 			const isTrailing = isAdjacent(
-				section.loc.endToken,
+				definition.loc.endToken,
 				comment.loc.startToken
 			);
 
