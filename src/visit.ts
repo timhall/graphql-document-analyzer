@@ -16,7 +16,7 @@ export type ExtendedASTVisitor = Visitor<ExtendedASTKindToNode>;
 export function visit(root: ExtendedASTNode, visitor: ExtendedASTVisitor): any {
 	return graphqlVisit(
 		root as ASTNode,
-		visitor,
+		visitor as Visitor<ASTKindToNode>,
 		ExtendedQueryDocumentKeys as VisitorKeyMap<ASTKindToNode>
 	);
 }

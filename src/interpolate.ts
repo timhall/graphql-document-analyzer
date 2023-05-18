@@ -1,10 +1,12 @@
 import type {
 	DefinitionNode,
-	DocumentNode,
 	FragmentDefinitionNode,
 	OperationDefinitionNode,
 } from "graphql";
-import type { Extended } from "./extended-ast";
+import type {
+	ExtendedDefinitionNode,
+	ExtendedDocumentNode,
+} from "./extended-ast";
 
 /**
  * For a document with invalid operations or fragments,
@@ -18,16 +20,16 @@ import type { Extended } from "./extended-ast";
  * 3. Named operations and fragments are interpolated by name
  */
 export function interpolate(
-	document: Extended<DocumentNode>,
-	reference: Extended<DocumentNode>
-): Extended<DocumentNode> {
+	document: ExtendedDocumentNode,
+	reference: ExtendedDocumentNode
+): ExtendedDocumentNode {
 	const documentOutline = document.definitions.filter(isRelevant);
 	const referenceOutline = reference.definitions.filter(isRelevant);
 
 	if (documentOutline.length !== referenceOutline.length) return document;
 
 	const definitions = document.definitions.map(
-		(definition: Extended<DefinitionNode>) => {
+		(definition: ExtendedDefinitionNode) => {
 			if (
 				definition.kind === "OperationDefinition" &&
 				definition.errors?.length
@@ -57,7 +59,7 @@ export function interpolate(
 		}
 	);
 
-	return { kind: "Document", definitions: definitions };
+	return { kind: "Document", definitions };
 }
 
 type RelevantNode = OperationDefinitionNode | FragmentDefinitionNode;

@@ -1,12 +1,7 @@
 import {
-	DefinitionNode,
-	DocumentNode,
-	FragmentDefinitionNode,
 	Kind,
 	Location,
-	OperationDefinitionNode,
 	ParseOptions,
-	SelectionSetNode,
 	Source,
 	Token,
 	TokenKind,
@@ -16,7 +11,22 @@ import { Parser } from "graphql/language/parser";
 import { isSource } from "graphql/language/source";
 import { processComments, processSectionComments } from "./comments";
 import {
-	Extended,
+	ExtendedASTNode,
+	ExtendedArgumentNode,
+	ExtendedDefinitionNode,
+	ExtendedDocumentNode,
+	ExtendedFieldNode,
+	ExtendedFragmentDefinitionNode,
+	ExtendedFragmentSpreadNode,
+	ExtendedInlineFragmentNode,
+	ExtendedNameNode,
+	ExtendedNamedTypeNode,
+	ExtendedOperationDefinitionNode,
+	ExtendedSelectionNode,
+	ExtendedSelectionSetNode,
+	ExtendedValueNode,
+	ExtendedVariableDefinitionNode,
+	ExtendedVariableNode,
 	invalid,
 	invalidShorthandOperationDefinition,
 } from "./extended-ast";
@@ -30,24 +40,26 @@ import {
 	tryParseOperation,
 } from "./landmarks";
 import {
+	ExtendedLexer,
 	restoreLexer,
 	safeAdvanceToEOF,
 	snapshotLexer,
 	strictAdvanceToEOF,
 } from "./lexer";
-import { splitLines } from "./lib/split-lines";
-import { substring } from "./lib/substring";
 import { ErrorWithLoc } from "./lib/error-with-loc";
+import { splitLines } from "./lib/split-lines";
 
 export function analyze(
 	source: string,
 	options?: ParseOptions
-): Extended<DocumentNode> {
+): ExtendedDocumentNode {
 	const parser = new ExtendedParser(source, options);
-	return parser.parseExtendedDocument();
+	return parser.parseDocument();
 }
 
 export class ExtendedParser extends Parser {
+	protected override _lexer: ExtendedLexer;
+	protected _lastNode: ExtendedASTNode | null = null;
 	protected _lines: Token[];
 	protected _landmarks: Landmark[];
 
@@ -56,20 +68,24 @@ export class ExtendedParser extends Parser {
 
 		super(source, options);
 
+		this._lexer = new ExtendedLexer(source);
 		this._lines = splitLines(source);
 		this._landmarks = findLandmarks(source, this._lines);
 	}
 
-	parseExtendedDocument(): Extended<DocumentNode> {
-		const sections: DefinitionNode[] = this.zeroToMany(
+	override parseName(): ExtendedNameNode {
+		return super.parseName();
+	}
+	override parseDocument(): ExtendedDocumentNode {
+		const definitions: ExtendedDefinitionNode[] = this.zeroToMany(
 			TokenKind.SOF,
-			this.parseSection,
+			this.parseDefinition,
 			TokenKind.EOF
 		);
 
 		const withDocumentComments = processComments(
 			this._lexer.source,
-			sections,
+			definitions,
 			this._lines
 		);
 		const withSectionComments = withDocumentComments.map((section) =>
@@ -81,8 +97,7 @@ export class ExtendedParser extends Parser {
 			definitions: withSectionComments,
 		};
 	}
-
-	parseSection(): DefinitionNode {
+	override parseDefinition(): ExtendedDefinitionNode {
 		if (this.peek(TokenKind.NAME)) {
 			switch (this._lexer.token.value) {
 				case "query":
@@ -98,8 +113,75 @@ export class ExtendedParser extends Parser {
 
 		return this.parseInvalid();
 	}
+	override parseOperationDefinition(): ExtendedOperationDefinitionNode {
+		return super.parseOperationDefinition();
+	}
+	// SKIP parseOperationType (only returns string, no token information)
+	override parseVariableDefinitions(): ExtendedVariableDefinitionNode[] {
+		return super.parseVariableDefinitions();
+	}
+	override parseVariableDefinition(): ExtendedVariableDefinitionNode {
+		return super.parseVariableDefinition();
+	}
+	override parseVariable(): ExtendedVariableNode {
+		return super.parseVariable();
+	}
+	override parseSelectionSet(): ExtendedSelectionSetNode {
+		// Generally, selection set requires non-empty selections,
+		// relax this requirement to allow for readable documents (even if invalid)
+		const start = this._lexer.token;
+		return {
+			kind: Kind.SELECTION_SET,
+			selections: this.zeroToMany(
+				TokenKind.BRACE_L,
+				this.parseSelection,
+				TokenKind.BRACE_R
+			),
+			loc: this.loc(start),
+		};
+	}
+	override parseSelection(): ExtendedSelectionNode {
+		return super.parseSelection();
+	}
+	override parseField(): ExtendedFieldNode {
+		return super.parseField();
+	}
+	override parseArguments(): ExtendedArgumentNode[] {
+		return super.parseArguments();
+	}
+	override parseArgument(): ExtendedArgumentNode {
+		return super.parseArgument();
+	}
+	override parseFragment():
+		| ExtendedFragmentSpreadNode
+		| ExtendedInlineFragmentNode {
+		return super.parseFragment();
+	}
+	override parseFragmentDefinition(): ExtendedFragmentDefinitionNode {
+		return super.parseFragmentDefinition();
+	}
+	override parseFragmentName(): ExtendedNameNode {
+		return super.parseFragmentName();
+	}
+	override parseValueLiteral(): ExtendedValueNode {
+		return super.parseValueLiteral();
+	}
+	// parseStringLiteral
+	// parseList
+	// parseObject
+	// parseObjectField
+	// parseDirectives
+	// parseDirective
+	// parseTypeReference
+	override parseNamedType(): ExtendedNamedTypeNode {
+		return super.parseNamedType();
+	}
 
-	tryParseOperationDefinition(): Extended<OperationDefinitionNode> {
+	//
+	// Custom
+	//
+
+	tryParseOperationDefinition(): ExtendedDefinitionNode {
 		const snapshot = snapshotLexer(this._lexer);
 		try {
 			const definition = this.parseOperationDefinition();
@@ -150,9 +232,7 @@ export class ExtendedParser extends Parser {
 		}
 	}
 
-	tryParseFragmentDefinition():
-		| Extended<FragmentDefinitionNode>
-		| Extended<OperationDefinitionNode> {
+	tryParseFragmentDefinition(): ExtendedDefinitionNode {
 		const snapshot = snapshotLexer(this._lexer);
 		try {
 			const fragment = this.parseFragmentDefinition();
@@ -199,7 +279,7 @@ export class ExtendedParser extends Parser {
 		}
 	}
 
-	parseInvalid(): Extended<OperationDefinitionNode> {
+	parseInvalid(): ExtendedDefinitionNode {
 		const start = this._lexer.token;
 		const next = findNextLandmark(this._landmarks, this._lexer.token.line + 1);
 
@@ -211,22 +291,6 @@ export class ExtendedParser extends Parser {
 		const end = this._lexer.lastToken;
 
 		return invalid(this._lexer.source, start, end);
-	}
-
-	// @override
-	parseSelectionSet(): SelectionSetNode {
-		// Generally, selection set requires non-empty selections,
-		// relax this requirement to allow for readable documents (even if invalid)
-		const start = this._lexer.token;
-		return {
-			kind: Kind.SELECTION_SET,
-			selections: this.zeroToMany(
-				TokenKind.BRACE_L,
-				this.parseSelection,
-				TokenKind.BRACE_R
-			),
-			loc: this.loc(start),
-		};
 	}
 
 	/**

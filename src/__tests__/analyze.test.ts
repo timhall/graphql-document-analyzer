@@ -5,7 +5,11 @@ import {
 } from "graphql";
 import { describe, expect, test } from "vitest";
 import { analyze, ExtendedParser } from "../analyze";
-import { Comments, Extended } from "../extended-ast";
+import {
+	Comments,
+	Extended,
+	ExtendedOperationDefinitionNode,
+} from "../extended-ast";
 import { substring } from "../lib/substring";
 
 test("should parse comment sections", () => {
@@ -75,31 +79,31 @@ subscription {
 }
 `);
 
-	expect(
-		(document.definitions[0] as InvalidOperationDefinitionNode).operation
-	).toBe("query");
-	expect(
-		(document.definitions[0] as InvalidOperationDefinitionNode).name?.value
-	).toBe("A");
+	expect((document.definitions[0] as OperationDefinitionNode).operation).toBe(
+		"query"
+	);
+	expect((document.definitions[0] as OperationDefinitionNode).name?.value).toBe(
+		"A"
+	);
 
-	expect(
-		(document.definitions[1] as InvalidOperationDefinitionNode).operation
-	).toBe("query");
-	expect((document.definitions[1] as InvalidOperationDefinitionNode).name).toBe(
+	expect((document.definitions[1] as OperationDefinitionNode).operation).toBe(
+		"query"
+	);
+	expect((document.definitions[1] as OperationDefinitionNode).name).toBe(
 		undefined
 	);
 
-	expect(
-		(document.definitions[2] as InvalidOperationDefinitionNode).operation
-	).toBe("mutation");
-	expect(
-		(document.definitions[2] as InvalidOperationDefinitionNode).name?.value
-	).toBe("D");
+	expect((document.definitions[2] as OperationDefinitionNode).operation).toBe(
+		"mutation"
+	);
+	expect((document.definitions[2] as OperationDefinitionNode).name?.value).toBe(
+		"D"
+	);
 
-	expect(
-		(document.definitions[3] as InvalidOperationDefinitionNode).operation
-	).toBe("subscription");
-	expect((document.definitions[3] as InvalidOperationDefinitionNode).name).toBe(
+	expect((document.definitions[3] as OperationDefinitionNode).operation).toBe(
+		"subscription"
+	);
+	expect((document.definitions[3] as OperationDefinitionNode).name).toBe(
 		undefined
 	);
 });
@@ -111,9 +115,9 @@ fragment F on G {
 }
 `);
 
-	expect(
-		(document.definitions[0] as InvalidFragmentDefinitionNode).name.value
-	).toBe("F");
+	expect((document.definitions[0] as FragmentDefinitionNode).name.value).toBe(
+		"F"
+	);
 });
 
 test("should parse empty selection sets", () => {
@@ -273,26 +277,27 @@ fragment C on D {
 # trailing
     `);
 
-		const document = parser.parseExtendedDocument();
+		const document = parser.parseDocument();
 
 		expect(document.definitions.length).toBe(5);
 
 		expect(document.definitions[0].kind).toBe("OperationDefinition");
 		expect(
 			substring(
-				(document.definitions[0] as Extended<OperationDefinitionNode>)
-					.errors?.[0].loc
+				(document.definitions[0] as ExtendedOperationDefinitionNode).errors?.[0]
+					.loc
 			)
 		).toBe("{\na {\nb\n}");
-		expect(document.definitions[0].comments?.preceding?.[0]?.value).toBe(
-			" leading"
-		);
+		expect(
+			(document.definitions[0] as ExtendedOperationDefinitionNode).comments
+				?.preceding?.[0]?.value
+		).toBe(" leading");
 
 		expect(document.definitions[1].kind).toBe("OperationDefinition");
 		expect(
 			substring(
-				(document.definitions[1] as Extended<OperationDefinitionNode>)
-					.errors?.[0].loc
+				(document.definitions[1] as ExtendedOperationDefinitionNode).errors?.[0]
+					.loc
 			)
 		).toBe("query A {\t\na {\nb\n}\n}\n# comment\n\n# another\n{");
 
@@ -307,9 +312,10 @@ fragment C on D {
 		).toBe("fragment A on B {\n}\n}");
 
 		expect(document.definitions[4].kind).toBe("FragmentDefinition");
-		expect(document.definitions[4].comments?.following?.[0]?.value).toBe(
-			" trailing"
-		);
+		expect(
+			(document.definitions[4] as Extended<FragmentDefinitionNode>).comments
+				?.following?.[0]?.value
+		).toBe(" trailing");
 	});
 
 	test("should parse odd indentation", () => {
@@ -344,7 +350,7 @@ fragment C on D {
 	}
 	`);
 
-		const document = parser.parseExtendedDocument();
+		const document = parser.parseDocument();
 		expect(document.definitions.length).toBe(3);
 		expect(document.definitions[0].kind).toBe("OperationDefinition");
 	});
@@ -356,7 +362,7 @@ fragment C on D {
 	}`;
 		const parser = new ExtendedParser(source);
 
-		const document = parser.parseExtendedDocument();
+		const document = parser.parseDocument();
 		expect(document.definitions.length).toBe(1);
 		expect(document.definitions[0].kind).toBe("OperationDefinition");
 		expect(

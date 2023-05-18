@@ -11,10 +11,12 @@ import {
 	Comments,
 	Extended,
 	ExtendedASTNode,
+	ExtendedDefinitionNode,
+	ExtendedDocumentNode,
 	comment,
 } from "./extended-ast";
-import { visit } from "./visit";
 import { isDefined } from "./lib/is-defined";
+import { visit } from "./visit";
 
 export function processComments<TNode extends ExtendedASTNode>(
 	source: Source,
@@ -115,9 +117,9 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 export function processSectionComments(
 	source: Source,
-	section: DefinitionNode,
+	section: ExtendedDefinitionNode,
 	lines: Token[]
-): DefinitionNode {
+): ExtendedDefinitionNode {
 	if (
 		section.kind !== "OperationDefinition" &&
 		section.kind !== "FragmentDefinition"
@@ -193,8 +195,8 @@ function merge(
 
 export function attachComments(
 	source: Source,
-	document: Extended<DocumentNode>
-): Extended<DocumentNode> {
+	document: ExtendedDocumentNode
+): ExtendedDocumentNode {
 	if (!document.loc) return document;
 
 	// Find all comment nodes in the document
@@ -256,7 +258,7 @@ export function attachComments(
 }
 
 function isTopLevel(
-	document: Extended<DocumentNode>
+	document: ExtendedDocumentNode
 ): (comment: CommentNode) => boolean {
 	return (comment: CommentNode) => {
 		return document.definitions.some((definition) => {

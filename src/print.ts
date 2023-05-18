@@ -1,28 +1,26 @@
-import {
-	ASTNode,
-	DefinitionNode,
-	FieldNode,
-	FragmentDefinitionNode,
-	Kind,
-	OperationDefinitionNode,
-	print as graphqlPrint,
-} from "graphql";
-import type { CommentNode, Comments, Extended } from "./extended-ast";
+import { FieldNode, Kind, print as graphqlPrint } from "graphql";
+import type {
+	CommentNode,
+	Comments,
+	ExtendedASTNode,
+	ExtendedFragmentDefinitionNode,
+	ExtendedOperationDefinitionNode,
+} from "./extended-ast";
+import { substring } from "./lib/substring";
 import {
 	ensureTrailingNewline,
 	trimTrailingNewlines,
 } from "./lib/trailing-newline";
 import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 import { visit } from "./visit";
-import { substring } from "./lib/substring";
 
-export function print(ast: Extended<ASTNode>): string {
+export function print(ast: ExtendedASTNode): string {
 	if (ast.kind !== "Document") {
 		return ensureTrailingNewline(resilientPrint(ast));
 	}
 
 	const output = [];
-	for (const definition of ast.definitions as Array<Extended<DefinitionNode>>) {
+	for (const definition of ast.definitions) {
 		if (
 			definition.kind !== "OperationDefinition" &&
 			definition.kind !== "FragmentDefinition"
@@ -42,7 +40,7 @@ export function print(ast: Extended<ASTNode>): string {
 }
 
 function printSectionWithComments(
-	section: OperationDefinitionNode | FragmentDefinitionNode
+	section: ExtendedOperationDefinitionNode | ExtendedFragmentDefinitionNode
 ): string {
 	const output = visit(section, {
 		OperationDefinition: {
@@ -93,7 +91,7 @@ const TEMPORARY_FIELD: FieldNode = {
  * 2. For empty operation selections, add a temporary node so that the braces are retained
  *    (and then remove that node from the output)
  */
-function resilientPrint(node: ASTNode): string {
+function resilientPrint(node: ExtendedASTNode): string {
 	const temporaryDocument = visit(node, {
 		OperationDefinition(node) {
 			if (node.selectionSet.selections.length > 0) return;
