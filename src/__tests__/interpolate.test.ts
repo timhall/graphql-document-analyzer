@@ -8,8 +8,8 @@ test("should interpolate single anonymous operation", () => {
 	const document = analyze("query { a { }");
 	const interpolated = interpolate(document, reference);
 
-	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(reference.sections[0])
+	expect(withoutLoc(interpolated.definitions[0])).toEqual(
+		withoutLoc(reference.definitions[0])
 	);
 });
 
@@ -18,8 +18,8 @@ test("should interpolate single named operation", () => {
 	const document = analyze("query A { a { }");
 	const interpolated = interpolate(document, reference);
 
-	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(reference.sections[0])
+	expect(withoutLoc(interpolated.definitions[0])).toEqual(
+		withoutLoc(reference.definitions[0])
 	);
 });
 
@@ -28,8 +28,8 @@ test("should interpolate single named operation", () => {
 	const document = analyze("query A { a { }");
 	const interpolated = interpolate(document, reference);
 
-	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(reference.sections[0])
+	expect(withoutLoc(interpolated.definitions[0])).toEqual(
+		withoutLoc(reference.definitions[0])
 	);
 });
 
@@ -52,24 +52,24 @@ subscription { g { }
 `);
 	const interpolated = interpolate(document, reference);
 
-	expect(interpolated.sections.length).toBe(document.sections.length);
-	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(document.sections[0])
+	expect(interpolated.definitions.length).toBe(document.definitions.length);
+	expect(withoutLoc(interpolated.definitions[0])).toEqual(
+		withoutLoc(document.definitions[0])
 	);
-	expect(withoutLoc(interpolated.sections[1])).toEqual(
-		withoutLoc(reference.sections[1])
+	expect(withoutLoc(interpolated.definitions[1])).toEqual(
+		withoutLoc(reference.definitions[1])
 	);
-	expect(withoutLoc(interpolated.sections[2])).toEqual(
-		withoutLoc(reference.sections[2])
+	expect(withoutLoc(interpolated.definitions[2])).toEqual(
+		withoutLoc(reference.definitions[2])
 	);
-	expect(withoutLoc(interpolated.sections[3])).toEqual(
-		withoutLoc(document.sections[3])
+	expect(withoutLoc(interpolated.definitions[3])).toEqual(
+		withoutLoc(document.definitions[3])
 	);
-	expect(withoutLoc(interpolated.sections[4])).toEqual(
-		withoutLoc(document.sections[4])
+	expect(withoutLoc(interpolated.definitions[4])).toEqual(
+		withoutLoc(document.definitions[4])
 	);
-	expect(withoutLoc(interpolated.sections[5])).toEqual(
-		withoutLoc(reference.sections[5])
+	expect(withoutLoc(interpolated.definitions[5])).toEqual(
+		withoutLoc(reference.definitions[5])
 	);
 });
 
@@ -88,7 +88,7 @@ query A {
 `);
 	const interpolated = interpolate(document, reference);
 
-	expect(interpolated.sections[0].loc).toEqual(document.sections[0].loc);
+	expect(interpolated.definitions[0].loc).toEqual(document.definitions[0].loc);
 });
 
 function withoutLoc(value: ExtendedASTNode): ExtendedASTNode {

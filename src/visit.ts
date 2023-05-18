@@ -6,10 +6,6 @@ import { ExtendedASTNode, ExtendedASTKindToNode } from "./extended-ast";
 export const ExtendedQueryDocumentKeys: VisitorKeyMap<ExtendedASTKindToNode> = {
 	...QueryDocumentKeys,
 	Comment: [],
-	ExtendedDocument: ["sections"],
-	Invalid: [],
-	InvalidOperationDefinition: [],
-	InvalidFragmentDefinition: [],
 };
 
 export type ExtendedASTVisitor = Visitor<ExtendedASTKindToNode>;
@@ -20,7 +16,7 @@ export type ExtendedASTVisitor = Visitor<ExtendedASTKindToNode>;
 export function visit(root: ExtendedASTNode, visitor: ExtendedASTVisitor): any {
 	return graphqlVisit(
 		root as ASTNode,
-		visitor,
+		visitor as Visitor<ASTKindToNode>,
 		ExtendedQueryDocumentKeys as VisitorKeyMap<ASTKindToNode>
 	);
 }

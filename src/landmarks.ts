@@ -1,15 +1,21 @@
-import { Lexer, OperationTypeNode, Source, Token, TokenKind } from "graphql";
 import {
+	FragmentDefinitionNode,
+	Lexer,
+	OperationDefinitionNode,
+	OperationTypeNode,
+	Source,
+	Token,
+	TokenKind,
+} from "graphql";
+import {
+	fragment,
 	invalidFragment,
-	InvalidFragmentDefinitionNode,
 	invalidOperationDefinition,
-	InvalidOperationDefinitionNode,
+	operationDefinition,
 } from "./extended-ast";
 import { safeAdvance } from "./lexer";
 
-export type Landmark =
-	| InvalidFragmentDefinitionNode
-	| InvalidOperationDefinitionNode;
+export type Landmark = OperationDefinitionNode | FragmentDefinitionNode;
 
 /**
  * Heuristic-based search for next "landmark", which is either
@@ -85,7 +91,7 @@ const OPERATION = /^\s*(query\s*|mutation\s*|subscription\s*)(\w+)?.*{/;
 export function tryParseOperation(
 	source: Source,
 	line: Token
-): InvalidOperationDefinitionNode | false {
+): OperationDefinitionNode | false {
 	if (!line.value) return false;
 
 	const match = line.value.match(OPERATION);
@@ -94,7 +100,7 @@ export function tryParseOperation(
 	const operation = (match[1]?.trim() ?? "query") as OperationTypeNode;
 	const name = match[2]?.trim();
 
-	return invalidOperationDefinition(source, operation, name, line, line);
+	return operationDefinition(source, operation, name, line, line);
 }
 
 const FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
@@ -102,7 +108,7 @@ const FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
 export function tryParseFragment(
 	source: Source,
 	line: Token
-): InvalidFragmentDefinitionNode | false {
+): FragmentDefinitionNode | false {
 	if (!line.value) return false;
 
 	const match = line.value.match(FRAGMENT);
@@ -111,5 +117,5 @@ export function tryParseFragment(
 	const name = match[1];
 	const typeCondition = match[2];
 
-	return invalidFragment(source, name, typeCondition, line, line);
+	return fragment(source, name, typeCondition, line, line);
 }

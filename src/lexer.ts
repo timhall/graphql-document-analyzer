@@ -8,6 +8,58 @@ type LexerState = {
 	lineStart: number;
 };
 
+export class ExtendedLexer extends Lexer {
+	/**
+	 * Comments found from lastToken to token
+	 */
+	comments: Token[] = [];
+
+	override advance(): Token {
+		let prev = (this.lastToken = this.token);
+		const token = this.lookahead();
+
+		// Find comments from lastToken to next
+		const comments = [];
+		const source = this.source;
+		const body = source.body;
+
+		let pos = this.lastToken.end;
+		while (pos < token.start) {
+			let code = body.charCodeAt(pos);
+
+			const line = this.line;
+			const col = 1 + pos - this.lineStart;
+
+			if (code === 35) {
+				const start = pos;
+				do {
+					code = body.charCodeAt(++pos);
+				} while (!isNaN(code) && (code > 0x001f || code === 0x0009));
+
+				const comment = new Token(
+					TokenKind.COMMENT,
+					start,
+					pos,
+					line,
+					col,
+					prev,
+					body.slice(start + 1, pos)
+				);
+
+				comments.push(comment);
+				prev = comment;
+			} else {
+				++pos;
+			}
+		}
+
+		this.comments = comments;
+		this.token = token;
+
+		return token;
+	}
+}
+
 /**
  * Restore lexer's internal state to given snapshot
  */

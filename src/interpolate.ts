@@ -1,9 +1,11 @@
-import type { FragmentDefinitionNode, OperationDefinitionNode } from "graphql";
 import type {
+	DefinitionNode,
+	FragmentDefinitionNode,
+	OperationDefinitionNode,
+} from "graphql";
+import type {
+	ExtendedDefinitionNode,
 	ExtendedDocumentNode,
-	InvalidFragmentDefinitionNode,
-	InvalidOperationDefinitionNode,
-	SectionNode,
 } from "./extended-ast";
 
 /**
@@ -21,54 +23,56 @@ export function interpolate(
 	document: ExtendedDocumentNode,
 	reference: ExtendedDocumentNode
 ): ExtendedDocumentNode {
-	const documentOutline = document.sections.filter(isRelevant);
-	const referenceOutline = reference.sections.filter(isRelevant);
+	const documentOutline = document.definitions.filter(isRelevant);
+	const referenceOutline = reference.definitions.filter(isRelevant);
 
 	if (documentOutline.length !== referenceOutline.length) return document;
 
-	const sections = document.sections.map((section) => {
-		if (section.kind === "InvalidOperationDefinition") {
-			const index = documentOutline.indexOf(section);
-			const isAnonymous = !section.name;
-			const replacement = isAnonymous
-				? referenceOutline.find(findAnonymousOperation(section, index))
-				: referenceOutline.find(findNamedOperation(section));
+	const definitions = document.definitions.map(
+		(definition: ExtendedDefinitionNode) => {
+			if (
+				definition.kind === "OperationDefinition" &&
+				definition.errors?.length
+			) {
+				const index = documentOutline.indexOf(definition);
+				const isAnonymous = !definition.name;
+				const replacement = isAnonymous
+					? referenceOutline.find(findAnonymousOperation(definition, index))
+					: referenceOutline.find(findNamedOperation(definition));
 
-			if (replacement) {
-				return { ...replacement, loc: section.loc };
+				if (replacement) {
+					return { ...replacement, loc: definition.loc };
+				}
 			}
-		}
-		if (section.kind === "InvalidFragmentDefinition") {
-			const replacement = referenceOutline.find(findFragment(section));
+			if (
+				definition.kind === "FragmentDefinition" &&
+				definition.errors?.length
+			) {
+				const replacement = referenceOutline.find(findFragment(definition));
 
-			if (replacement) {
-				return { ...replacement, loc: section.loc };
+				if (replacement) {
+					return { ...replacement, loc: definition.loc };
+				}
 			}
+
+			return definition;
 		}
+	);
 
-		return section;
-	});
-
-	return { kind: "ExtendedDocument", sections };
+	return { kind: "Document", definitions };
 }
 
-type RelevantNode =
-	| OperationDefinitionNode
-	| InvalidOperationDefinitionNode
-	| FragmentDefinitionNode
-	| InvalidFragmentDefinitionNode;
+type RelevantNode = OperationDefinitionNode | FragmentDefinitionNode;
 
-function isRelevant(section: SectionNode): section is RelevantNode {
+function isRelevant(definition: DefinitionNode): definition is RelevantNode {
 	return (
-		section.kind === "OperationDefinition" ||
-		section.kind === "InvalidOperationDefinition" ||
-		section.kind === "FragmentDefinition" ||
-		section.kind === "InvalidFragmentDefinition"
+		definition.kind === "OperationDefinition" ||
+		definition.kind === "FragmentDefinition"
 	);
 }
 
 function findAnonymousOperation(
-	operation: InvalidOperationDefinitionNode,
+	operation: OperationDefinitionNode,
 	index: number
 ): (
 	relevant: RelevantNode,
@@ -88,7 +92,7 @@ function findAnonymousOperation(
 }
 
 function findNamedOperation(
-	operation: InvalidOperationDefinitionNode
+	operation: OperationDefinitionNode
 ): (relevant: RelevantNode) => relevant is OperationDefinitionNode {
 	return (relevant: RelevantNode): relevant is OperationDefinitionNode => {
 		return (
@@ -101,7 +105,7 @@ function findNamedOperation(
 }
 
 function findFragment(
-	fragment: InvalidFragmentDefinitionNode
+	fragment: FragmentDefinitionNode
 ): (relevant: RelevantNode) => relevant is FragmentDefinitionNode {
 	return (relevant: RelevantNode): relevant is FragmentDefinitionNode => {
 		return (

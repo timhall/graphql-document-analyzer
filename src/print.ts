@@ -1,11 +1,12 @@
-import { ASTNode, FieldNode, Kind, print as graphqlPrint } from "graphql";
+import { FieldNode, Kind, print as graphqlPrint } from "graphql";
 import type {
 	CommentNode,
 	Comments,
-	ExtendedDocumentNode,
-	SectionNode,
+	ExtendedASTNode,
+	ExtendedFragmentDefinitionNode,
+	ExtendedOperationDefinitionNode,
 } from "./extended-ast";
-import { isExtendedDocumentNode } from "./extended-ast";
+import { substring } from "./lib/substring";
 import {
 	ensureTrailingNewline,
 	trimTrailingNewlines,
@@ -13,27 +14,34 @@ import {
 import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 import { visit } from "./visit";
 
-export function print(ast: ASTNode | ExtendedDocumentNode): string {
-	if (!isExtendedDocumentNode(ast)) {
+export function print(ast: ExtendedASTNode): string {
+	if (ast.kind !== "Document") {
 		return ensureTrailingNewline(resilientPrint(ast));
 	}
 
 	const output = [];
-	for (const section of ast.sections) {
-		const value =
-			section.kind === "Invalid" ||
-			section.kind === "InvalidOperationDefinition" ||
-			section.kind === "InvalidFragmentDefinition"
-				? section.value
-				: printSectionWithComments(section);
+	for (const definition of ast.definitions) {
+		if (
+			definition.kind !== "OperationDefinition" &&
+			definition.kind !== "FragmentDefinition"
+		) {
+			output.push(resilientPrint(definition));
+			continue;
+		}
 
-		output.push(printWithComments(value, section.comments));
+		const value = definition.errors?.length
+			? substring(definition.errors[0].loc)
+			: printSectionWithComments(definition);
+
+		output.push(printWithComments(value, definition.comments));
 	}
 
 	return ensureTrailingNewline(output.join("\n\n"));
 }
 
-function printSectionWithComments(section: SectionNode): string {
+function printSectionWithComments(
+	section: ExtendedOperationDefinitionNode | ExtendedFragmentDefinitionNode
+): string {
 	const output = visit(section, {
 		OperationDefinition: {
 			leave(node) {
@@ -83,7 +91,7 @@ const TEMPORARY_FIELD: FieldNode = {
  * 2. For empty operation selections, add a temporary node so that the braces are retained
  *    (and then remove that node from the output)
  */
-function resilientPrint(node: ASTNode): string {
+function resilientPrint(node: ExtendedASTNode): string {
 	const temporaryDocument = visit(node, {
 		OperationDefinition(node) {
 			if (node.selectionSet.selections.length > 0) return;
@@ -128,8 +136,8 @@ function printWithComments(
 	value: string,
 	comments: Comments | undefined
 ): string {
-	const before = comments?.before.map(printComment).join("\n\n");
-	const after = comments?.after.map(printComment).join("\n\n");
+	const before = comments?.preceding?.map(printComment).join("\n\n");
+	const after = comments?.following?.map(printComment).join("\n\n");
 
 	return [before, value, after].filter(Boolean).join("\n");
 }

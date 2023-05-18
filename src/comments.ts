@@ -1,14 +1,22 @@
-import { Location, Source, Token, TokenKind } from "graphql";
+import {
+	DefinitionNode,
+	DocumentNode,
+	Location,
+	Source,
+	Token,
+	TokenKind,
+} from "graphql";
 import {
 	CommentNode,
 	Comments,
+	Extended,
 	ExtendedASTNode,
+	ExtendedDefinitionNode,
 	ExtendedDocumentNode,
-	SectionNode,
 	comment,
 } from "./extended-ast";
-import { visit } from "./visit";
 import { isDefined } from "./lib/is-defined";
+import { visit } from "./visit";
 
 export function processComments<TNode extends ExtendedASTNode>(
 	source: Source,
@@ -49,9 +57,17 @@ export function processComments<TNode extends ExtendedASTNode>(
 	//    b. If a comment is after last node, add to after of last node
 	//    c. If a comment is adjacent to previous node, add to after of previous node
 	//    d. Otherwise, add to before of next node
-	const groupedByNode: Map<ExtendedASTNode, Comments> = new Map();
-	const ensureComments = (section: ExtendedASTNode): Comments => {
-		const value = groupedByNode.get(section) ?? { before: [], after: [] };
+	const groupedByNode: Map<
+		ExtendedASTNode,
+		Comments & { preceding: CommentNode[]; following: CommentNode[] }
+	> = new Map();
+	const ensureComments = (
+		section: ExtendedASTNode
+	): Comments & { preceding: CommentNode[]; following: CommentNode[] } => {
+		const value = groupedByNode.get(section) ?? {
+			preceding: [],
+			following: [],
+		};
 		if (!groupedByNode.has(section)) groupedByNode.set(section, value);
 
 		return value;
@@ -79,16 +95,16 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 		if (after && !before) {
 			// a.
-			ensureComments(after).before.push(comment);
+			ensureComments(after).preceding.push(comment);
 		} else if (before && !after) {
 			// b.
-			ensureComments(before).after.push(comment);
+			ensureComments(before).following.push(comment);
 		} else if (before?.loc && adjacent(before.loc, comment.loc)) {
 			// c.
-			ensureComments(before).after.push(comment);
+			ensureComments(before).following.push(comment);
 		} else if (after) {
 			// d.
-			ensureComments(after).before.push(comment);
+			ensureComments(after).preceding.push(comment);
 		}
 	}
 
@@ -101,9 +117,9 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 export function processSectionComments(
 	source: Source,
-	section: SectionNode,
+	section: ExtendedDefinitionNode,
 	lines: Token[]
-): SectionNode {
+): ExtendedDefinitionNode {
 	if (
 		section.kind !== "OperationDefinition" &&
 		section.kind !== "FragmentDefinition"
@@ -224,7 +240,7 @@ export function attachComments(
 	// 3. Leading comments are attached to the closest following node
 
 	return visit(document, {
-		ExtendedDocument(node) {
+		Document(node) {
 			if (!topLevelComments.length) return;
 
 			// console.log(
@@ -235,7 +251,7 @@ export function attachComments(
 
 			return {
 				...node,
-				sections: node.sections,
+				definitions: node.definitions,
 			};
 		},
 	});
@@ -245,18 +261,18 @@ function isTopLevel(
 	document: ExtendedDocumentNode
 ): (comment: CommentNode) => boolean {
 	return (comment: CommentNode) => {
-		return document.sections.some((section) => {
-			if (!comment.loc || !section.loc) return false;
+		return document.definitions.some((definition) => {
+			if (!comment.loc || !definition.loc) return false;
 
 			const isInside =
-				comment.loc.start >= section.loc.start &&
-				comment.loc.end <= section.loc.end;
+				comment.loc.start >= definition.loc.start &&
+				comment.loc.end <= definition.loc.end;
 			const isLeading = isAdjacent(
 				comment.loc.endToken,
-				section.loc.startToken
+				definition.loc.startToken
 			);
 			const isTrailing = isAdjacent(
-				section.loc.endToken,
+				definition.loc.endToken,
 				comment.loc.startToken
 			);
 
