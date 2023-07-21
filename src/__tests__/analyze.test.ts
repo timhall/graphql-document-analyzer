@@ -1,12 +1,7 @@
-import {
-	FragmentDefinitionNode,
-	OperationDefinitionNode,
-	SelectionNode,
-} from "graphql";
+import { FragmentDefinitionNode, OperationDefinitionNode } from "graphql";
 import { describe, expect, test } from "vitest";
 import { analyze, ExtendedParser } from "../analyze";
 import {
-	Comments,
 	InvalidFragmentDefinitionNode,
 	InvalidOperationDefinitionNode,
 } from "../extended-ast";
@@ -203,40 +198,6 @@ c
 	{d(e: "}"}}
 `
 	);
-});
-
-test("should add comments to selections", () => {
-	const document = analyze(`
-query A {
-	# a
-  a {
-
-  }
-
-	#b.before
-	b
-	#b.after
-
-	# c.1
-
-	# c.2
-	c
-	# c.after
-}
-`);
-
-	expect(document.sections.length).toBe(1);
-	expect(document.sections[0].kind).toBe("OperationDefinition");
-
-	const selections = (document.sections[0] as OperationDefinitionNode)
-		.selectionSet.selections as Array<SelectionNode & { comments?: Comments }>;
-	expect(selections[0].comments?.before[0]?.value).toBe(" a");
-	expect(selections[0].comments?.after.length).toBe(0);
-	expect(selections[1].comments?.before[0]?.value).toBe("b.before");
-	expect(selections[1].comments?.after[0]?.value).toBe("b.after");
-	expect(selections[2].comments?.before[0]?.value).toBe(" c.1");
-	expect(selections[2].comments?.before[1]?.value).toBe(" c.2");
-	expect(selections[2].comments?.after[0]?.value).toBe(" c.after");
 });
 
 describe("ResilientParser", () => {

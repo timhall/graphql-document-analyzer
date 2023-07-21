@@ -1,64 +1,47 @@
-import { ASTNode, FieldNode, Kind, print as graphqlPrint } from "graphql";
-import type {
-	CommentNode,
-	Comments,
-	ExtendedDocumentNode,
-	SectionNode,
-} from "./extended-ast";
+import {
+	ASTNode,
+	DefinitionNode,
+	DocumentNode,
+	FieldNode,
+	Kind,
+	print as graphqlPrint,
+	visit,
+} from "graphql";
+import type { CommentNode, ExtendedDocumentNode } from "./extended-ast";
 import { isExtendedDocumentNode } from "./extended-ast";
 import {
 	ensureTrailingNewline,
 	trimTrailingNewlines,
 } from "./lib/trailing-newline";
 import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
-import { visit } from "./visit";
 
 export function print(ast: ASTNode | ExtendedDocumentNode): string {
 	if (!isExtendedDocumentNode(ast)) {
-		return ensureTrailingNewline(resilientPrint(ast));
+		return ensureTrailingNewline(
+			ast.kind === Kind.DOCUMENT ? resilientPrint(ast) : graphqlPrint(ast)
+		);
 	}
 
 	const output = [];
 	for (const section of ast.sections) {
-		const value =
+		if (
 			section.kind === "Invalid" ||
 			section.kind === "InvalidOperationDefinition" ||
 			section.kind === "InvalidFragmentDefinition"
-				? section.value
-				: printSectionWithComments(section);
+		) {
+			output.push(section.value);
+			continue;
+		}
 
-		output.push(printWithComments(value, section.comments));
+		const before = section.comments?.before.map(printComment).join("\n\n");
+		const after = section.comments?.after.map(printComment).join("\n\n");
+
+		output.push(
+			[before, resilientPrint(section), after].filter(Boolean).join("\n")
+		);
 	}
 
-	return ensureTrailingNewline(output.join("\n\n"));
-}
-
-function printSectionWithComments(section: SectionNode): string {
-	const output = visit(section, {
-		OperationDefinition: {
-			leave(node) {
-				return node.name
-					? `${node.operation} ${node.name.value} ${node.selectionSet}`
-					: `${node.selectionSet}`;
-			},
-		},
-		SelectionSet: {
-			leave(node) {
-				const selections = node.selections.length
-					? indent(joinCommented(node.selections as unknown as string[]))
-					: "\n";
-				return `{\n${selections}\n}\n`;
-			},
-		},
-		Field(node) {
-			return printWithComments(
-				trimTrailingNewlines(resilientPrint(node)),
-				node.comments
-			);
-		},
-	});
-
-	return trimTrailingNewlines(trimTrailingWhitespace(output));
+	return ensureTrailingNewline(output.join("\n"));
 }
 
 const TEMPORARY_FIELD: FieldNode = {
@@ -74,10 +57,20 @@ const TEMPORARY_FIELD: FieldNode = {
  * 2. For empty operation selections, add a temporary node so that the braces are retained
  *    (and then remove that node from the output)
  */
-function resilientPrint(node: ASTNode): string {
-	const temporaryDocument = visit(node, {
+function resilientPrint(document: DocumentNode): string;
+function resilientPrint(definition: DefinitionNode): string;
+function resilientPrint(node: DocumentNode | DefinitionNode): string {
+	const document: DocumentNode =
+		node.kind === Kind.DOCUMENT
+			? node
+			: {
+					kind: Kind.DOCUMENT,
+					definitions: [node],
+			  };
+	const temporaryDocument = visit(document, {
 		OperationDefinition(node) {
 			if (node.selectionSet.selections.length > 0) return;
+
 			return {
 				...node,
 				selectionSet: {
@@ -88,6 +81,7 @@ function resilientPrint(node: ASTNode): string {
 		},
 		Field(node) {
 			if (node.selectionSet?.selections.length !== 0) return;
+
 			return {
 				...node,
 				selectionSet: {
@@ -98,6 +92,7 @@ function resilientPrint(node: ASTNode): string {
 		},
 		InlineFragment(node) {
 			if (node.selectionSet.selections.length > 0) return;
+
 			return {
 				...node,
 				selectionSet: {
@@ -107,6 +102,7 @@ function resilientPrint(node: ASTNode): string {
 			};
 		},
 	});
+
 	const valid = graphqlPrint(temporaryDocument);
 	const value = trimTrailingNewlines(
 		trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""))
@@ -115,45 +111,9 @@ function resilientPrint(node: ASTNode): string {
 	return value;
 }
 
-function printWithComments(
-	value: string,
-	comments: Comments | undefined
-): string {
-	const before = comments?.before.map(printComment).join("\n\n");
-	const after = comments?.after.map(printComment).join("\n\n");
-
-	return [before, value, after].filter(Boolean).join("\n");
-}
-
 function printComment(comment: CommentNode): string {
 	return comment.value
 		.split("\n")
-		.map((line) => `#${line}`)
-		.join("\n");
-}
-
-/**
- * Join potentially commented lines, adding a blank line around comments
- */
-function joinCommented(parts: string[]): string {
-	return parts
-		.reduce((lines, part) => {
-			const additional = part.split("\n");
-			const spacing =
-				(lines.length || lines.at(-1)?.startsWith("#")) &&
-				additional[0]?.startsWith("#");
-
-			return spacing
-				? [...lines, "", ...additional]
-				: [...lines, ...additional];
-		}, [] as string[])
-		.join("\n");
-}
-
-function indent(value: string, spaces = 2): string {
-	const indentation = " ".repeat(spaces);
-	return value
-		.split("\n")
-		.map((line) => `${indentation}${line}`)
+		.map((line) => `# ${line}`)
 		.join("\n");
 }

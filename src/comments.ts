@@ -10,11 +10,11 @@ import {
 import { visit } from "./visit";
 import { isDefined } from "./lib/is-defined";
 
-export function processComments<TNode extends ExtendedASTNode>(
+export function processDocumentComments(
 	source: Source,
-	nodes: readonly TNode[],
-	lines: readonly Token[]
-): TNode[] {
+	sections: SectionNode[],
+	lines: Token[]
+): SectionNode[] {
 	// 1. Find all comments
 	const comments = lines
 		.filter((line) => line.value?.trim().startsWith("#"))
@@ -34,7 +34,7 @@ export function processComments<TNode extends ExtendedASTNode>(
 		});
 
 	// 2. Merge comments that are adjacent
-	const merged = comments.reduce((grouped, comment) => {
+	const grouped = comments.reduce((grouped, comment) => {
 		const previous = grouped.at(-1);
 		if (previous && adjacent(previous.loc, comment.loc)) {
 			return [...grouped.slice(0, -1), merge(previous, comment)];
@@ -43,26 +43,19 @@ export function processComments<TNode extends ExtendedASTNode>(
 		return [...grouped, comment];
 	}, [] as Array<CommentNode & { loc: Location }>);
 
-	// 3. Group comments by node
+	// 3. Group comments by section
 	//
-	//    a. If a comment is before first node, add to before of first node
-	//    b. If a comment is after last node, add to after of last node
-	//    c. If a comment is adjacent to previous node, add to after of previous node
-	//    d. Otherwise, add to before of next node
-	const groupedByNode: Map<ExtendedASTNode, Comments> = new Map();
-	const ensureComments = (section: ExtendedASTNode): Comments => {
-		const value = groupedByNode.get(section) ?? { before: [], after: [] };
-		if (!groupedByNode.has(section)) groupedByNode.set(section, value);
-
-		return value;
-	};
-
-	for (const comment of merged) {
-		let before: ExtendedASTNode | undefined = undefined;
-		let after: ExtendedASTNode | undefined = undefined;
+	//    a. If a comment is before first section, add to before of first section
+	//    b. If a comment is after last section, add to after of last section
+	//    c. If a comment is adjacent to previous section, add to after of previous section
+	//    d. Otherwise, add to before of next section
+	const bySection: Map<SectionNode, Comments> = new Map();
+	for (const comment of grouped) {
+		let before: SectionNode | undefined = undefined;
+		let after: SectionNode | undefined = undefined;
 		let insideSection = false;
 
-		for (const section of nodes) {
+		for (const section of sections) {
 			if (!section.loc) continue;
 
 			if (overlaps(section.loc, comment.loc)) {
@@ -79,21 +72,30 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 		if (after && !before) {
 			// a.
-			ensureComments(after).before.push(comment);
+			if (!bySection.has(after))
+				bySection.set(after, { before: [], after: [] });
+			bySection.get(after)?.before.push(comment);
 		} else if (before && !after) {
 			// b.
-			ensureComments(before).after.push(comment);
+			if (!bySection.has(before))
+				bySection.set(before, { before: [], after: [] });
+			bySection.get(before)?.after.push(comment);
 		} else if (before?.loc && adjacent(before.loc, comment.loc)) {
 			// c.
-			ensureComments(before).after.push(comment);
+			if (!bySection.has(before))
+				bySection.set(before, { before: [], after: [] });
+			bySection.get(before)?.after.push(comment);
 		} else if (after) {
 			// d.
-			ensureComments(after).before.push(comment);
+			if (!bySection.has(after))
+				bySection.set(after, { before: [], after: [] });
+			bySection.get(after)?.before.push(comment);
 		}
 	}
 
-	const withComments = nodes.map((section) => {
-		return { ...section, comments: groupedByNode.get(section) };
+	// 3. Attach to surrounding sections by proximity
+	const withComments = sections.map((section) => {
+		return { ...section, comments: bySection.get(section) };
 	});
 
 	return withComments;
@@ -101,39 +103,9 @@ export function processComments<TNode extends ExtendedASTNode>(
 
 export function processSectionComments(
 	source: Source,
-	section: SectionNode,
-	lines: Token[]
+	section: SectionNode
 ): SectionNode {
-	if (
-		section.kind !== "OperationDefinition" &&
-		section.kind !== "FragmentDefinition"
-	) {
-		return section;
-	}
-
-	if (!section.selectionSet.loc) return section;
-
-	// 1. Select lines for section
-	const relevantLines = lines.slice(
-		section.selectionSet.loc.startToken.line - 1,
-		section.selectionSet.loc.endToken.line - 1
-	);
-	if (!relevantLines.length) return section;
-
-	// 2. Add comments to selections
-	const selections = processComments(
-		source,
-		section.selectionSet.selections,
-		relevantLines
-	);
-
-	return {
-		...section,
-		selectionSet: {
-			...section.selectionSet,
-			selections,
-		},
-	};
+	return section;
 }
 
 function overlaps(

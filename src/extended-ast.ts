@@ -9,10 +9,10 @@ import {
 	Source,
 	Token,
 } from "graphql";
-import { isDefined } from "./lib/is-defined";
 import { isRecord } from "./lib/is-record";
 import { splitLines } from "./lib/split-lines";
 import { substring } from "./lib/substring";
+import { isDefined } from "./lib/is-defined";
 
 export type ExtendedASTNode =
 	| (ASTNode & { comments?: Comments })
@@ -22,9 +22,7 @@ export type ExtendedASTNode =
 	| InvalidNode
 	| CommentNode;
 
-export type ExtendedASTKindToNode = {
-	[Key in keyof ASTKindToNode]: ASTKindToNode[Key] & { comments?: Comments };
-} & {
+export type ExtendedASTKindToNode = ASTKindToNode & {
 	ExtendedDocument: ExtendedDocumentNode;
 	InvalidOperationDefinition: InvalidOperationDefinitionNode;
 	InvalidFragmentDefinition: InvalidFragmentDefinitionNode;
