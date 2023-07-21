@@ -11,31 +11,30 @@ import {
 	TokenKindEnum,
 } from "graphql";
 import { Parser } from "graphql/language/parser";
-import { isSource } from "graphql/language/source";
-import { processDocumentComments, processSectionComments } from "./comments";
 import {
 	ExtendedDocumentNode,
+	invalid,
 	InvalidFragmentDefinitionNode,
 	InvalidNode,
 	InvalidOperationDefinitionNode,
-	SectionNode,
-	invalid,
 	invalidShorthandOperationDefinition,
+	SectionNode,
 } from "./extended-ast";
+import { insertWhitespace } from "./lib/insert-whitespace";
 import {
-	Landmark,
+	safeAdvanceToLandmark,
 	findLandmarks,
 	findNextLandmark,
-	safeAdvanceToLandmark,
+	Landmark,
 	strictAdvanceToLandmark,
 	tryParseFragment,
 	tryParseOperation,
 } from "./landmarks";
 import {
-	restoreLexer,
 	safeAdvanceToEOF,
-	snapshotLexer,
+	restoreLexer,
 	strictAdvanceToEOF,
+	snapshotLexer,
 } from "./lexer";
 import { splitLines } from "./lib/split-lines";
 import { substring } from "./lib/substring";
@@ -53,7 +52,7 @@ export class ExtendedParser extends Parser {
 	protected _landmarks: Landmark[];
 
 	constructor(source: string | Source, options: ParseOptions = {}) {
-		source = isSource(source) ? source : new Source(source);
+		source = typeof source === "string" ? new Source(source) : source;
 
 		super(source, options);
 
@@ -62,24 +61,20 @@ export class ExtendedParser extends Parser {
 	}
 
 	parseExtendedDocument(): ExtendedDocumentNode {
-		const sections: SectionNode[] = this.zeroToMany(
+		const definitions: SectionNode[] = this.zeroToMany(
 			TokenKind.SOF,
 			this.parseSection,
 			TokenKind.EOF
 		);
-
-		const withDocumentComments = processDocumentComments(
+		const sections = insertWhitespace(
 			this._lexer.source,
-			sections,
-			this._lines
-		);
-		const withSectionComments = withDocumentComments.map((section) =>
-			processSectionComments(this._lexer.source, section)
+			this._lines,
+			definitions
 		);
 
 		return {
 			kind: "ExtendedDocument",
-			sections: withSectionComments,
+			sections,
 		};
 	}
 

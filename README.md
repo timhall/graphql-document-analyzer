@@ -10,7 +10,8 @@ a variety of issues when working with GraphQL documents, including:
 ## `analyze`
 
 `analyze` is very similar to GraphQL's built-in `parse` method, with a field `sections` that contains
-all valid and invalid sections of the document and parses relevant comments into a `comments` field on each node.
+all valid, invalid, and comment sections of the document. Additionally, `definitions` will be empty
+if the document has no valid definitions (instead of throwing an error).
 
 ```ts
 import { analyze } from "graphql-document-analyzer";
@@ -23,19 +24,18 @@ query A {
 const document = analyze(source);
 
 expect(document).toEqual({
-  kind: "ExtendedDocument",
+  kind: "Document",
+  definitions: [],
+
+  // Extension of DocumentNode with sections
   sections: [
+    {
+      kind: "Ignored",
+      value: "# Notes about A",
+    },
     {
       kind: "InvalidOperationDefinition",
       value: "query A {\n  b {\n}",
-      comments: {
-        before: [
-          {
-            kind: "Comment",
-            value: " Notes about A",
-          },
-        ],
-      },
     },
   ],
 });
@@ -61,8 +61,8 @@ query A {
 const approximate = interpolate(document, reference);
 
 expect(approximate).toEqual({
-  kind: 'ExtendedDocument',
-  sections: [
+  kind: 'Document',
+  definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'query',
@@ -84,6 +84,16 @@ expect(approximate).toEqual({
       }
     }
   ],
+  sections: [
+    {
+      kind: 'Ignored',
+      value: '# Notes about A'
+    },
+    {
+      kind: 'OperationDefinition',
+      // same as above...
+    }
+  ]
 });
 ```
 
