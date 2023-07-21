@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { splitLines } from "../split-lines";
+import { splitLines } from "../source";
 
 test("should split newlines", () => {
 	const lines = splitLines("ab\ncdefgh\nijk");

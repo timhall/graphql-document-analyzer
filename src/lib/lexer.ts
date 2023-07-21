@@ -1,5 +1,5 @@
 import { Lexer, Source, Token, TokenKind } from "graphql";
-import { splitLines } from "./lib/split-lines";
+import { splitLines } from "./source";
 
 type LexerState = {
 	lastToken: Token;
