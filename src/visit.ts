@@ -48,12 +48,26 @@ export function visit(root: ExtendedASTNode, visitor: ExtendedASTVisitor): any {
 	// Pass each section through visit and then update definitions after visiting
 
 	if (isExtendedDocumentNode(node)) {
-		const sections = node.sections
-			.map((section) => visit(section, visitor))
-			.flat()
-			.filter((section) => section !== null);
+		const visited: any[] = [];
+		let broke = false;
+
+		for (const section of node.sections) {
+			const result = visit(section, visitor);
+			if (result === BREAK) {
+				broke = true;
+				break;
+			}
+
+			visited.push(result);
+		}
+
+		const sections = visited.flat().filter((section) => section !== null);
 
 		node = { kind: "ExtendedDocument", sections };
+
+		if (broke) {
+			return node;
+		}
 	}
 
 	// 3. Leave
