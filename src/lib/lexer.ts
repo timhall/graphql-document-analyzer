@@ -31,7 +31,7 @@ export function snapshotLexer(lexer: Lexer): LexerState {
 			lastToken.line,
 			lastToken.column,
 			lastToken.prev,
-			lastToken.value
+			lastToken.value,
 		),
 		token: new Token(
 			token.kind,
@@ -40,7 +40,7 @@ export function snapshotLexer(lexer: Lexer): LexerState {
 			token.line,
 			token.column,
 			token.prev,
-			token.value
+			token.value,
 		),
 		line,
 		lineStart,
@@ -83,7 +83,7 @@ export function safeAdvance(lexer: Lexer): void {
 			lexer.source.body.length,
 			lines.length + 1,
 			1,
-			lexer.token
+			lexer.token,
 		);
 
 		lexer.lastToken = EOF;

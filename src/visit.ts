@@ -30,7 +30,7 @@ export function visit(root: ExtendedASTNode, visitor: ExtendedASTVisitor): any {
 		undefined,
 		undefined,
 		[],
-		[]
+		[],
 	);
 
 	if (entered === BREAK) {
@@ -82,7 +82,7 @@ export function visit(root: ExtendedASTNode, visitor: ExtendedASTVisitor): any {
 		undefined,
 		undefined,
 		[],
-		[]
+		[],
 	);
 
 	if (left === BREAK) {
@@ -132,12 +132,12 @@ type VisitFn<TVisitedNode extends ExtendedASTNode> = (
 	key: string | number | undefined,
 	parent: ASTNode | ReadonlyArray<ASTNode> | undefined,
 	path: ReadonlyArray<string | number>,
-	ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>
+	ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>,
 ) => any;
 
 function getEnterLeaveForKind<TNode extends ExtendedASTNode>(
 	visitor: ExtendedASTVisitor,
-	kind: string
+	kind: string,
 ): EnterLeaveVisitor<TNode> {
 	const kindVisitor: VisitFn<TNode> | EnterLeaveVisitor<TNode> | undefined = (
 		visitor as any

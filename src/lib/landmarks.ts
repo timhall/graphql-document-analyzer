@@ -38,10 +38,10 @@ export function findLandmarks(source: Source, lines: Token[]): Landmark[] {
  */
 export function findNextLandmark(
 	landmarks: Landmark[],
-	lineNumber: number = 1
+	lineNumber: number = 1,
 ): Landmark | undefined {
 	return landmarks.find(
-		(landmark) => landmark.loc && landmark.loc?.startToken.line >= lineNumber
+		(landmark) => landmark.loc && landmark.loc?.startToken.line >= lineNumber,
 	);
 }
 
@@ -64,7 +64,7 @@ export function safeAdvanceToLandmark(lexer: Lexer, landmark: Landmark): void {
  */
 export function strictAdvanceToLandmark(
 	lexer: Lexer,
-	landmark: Landmark
+	landmark: Landmark,
 ): void {
 	while (
 		landmark?.loc
@@ -84,7 +84,7 @@ const OPERATION = /^\s*(query\s*|mutation\s*|subscription\s*)(\w+)?.*{/;
 
 export function tryParseOperation(
 	source: Source,
-	line: Token
+	line: Token,
 ): InvalidOperationDefinitionNode | false {
 	if (!line.value) return false;
 
@@ -101,7 +101,7 @@ const FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
 
 export function tryParseFragment(
 	source: Source,
-	line: Token
+	line: Token,
 ): InvalidFragmentDefinitionNode | false {
 	if (!line.value) return false;
 

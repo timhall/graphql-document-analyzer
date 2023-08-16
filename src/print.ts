@@ -18,7 +18,7 @@ import { trimTrailingWhitespace } from "./lib/trim-trailing-whitespace";
 export function print(ast: ASTNode | ExtendedDocumentNode): string {
 	if (!isExtendedDocumentNode(ast)) {
 		return ensureTrailingNewline(
-			ast.kind === Kind.DOCUMENT ? resilientPrint(ast) : graphqlPrint(ast)
+			ast.kind === Kind.DOCUMENT ? resilientPrint(ast) : graphqlPrint(ast),
 		);
 	}
 
@@ -101,7 +101,7 @@ function resilientPrint(node: DocumentNode | DefinitionNode): string {
 
 	const valid = graphqlPrint(temporaryDocument);
 	const value = trimTrailingNewlines(
-		trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, ""))
+		trimTrailingWhitespace(valid.replace(/TEMPORARY_FIELD/g, "")),
 	);
 
 	return value;

@@ -55,12 +55,12 @@ export class ResilientParser extends Parser {
 		const definitions: SectionNode[] = this.zeroToMany(
 			TokenKind.SOF,
 			this.parseSection,
-			TokenKind.EOF
+			TokenKind.EOF,
 		);
 		const sections = insertWhitespace(
 			this._lexer.source,
 			this._lines,
-			definitions
+			definitions,
 		);
 
 		return {
@@ -112,7 +112,7 @@ export class ResilientParser extends Parser {
 					? invalidShorthandOperationDefinition(
 							this._lexer.source,
 							start,
-							start
+							start,
 					  )
 					: tryParseOperation(this._lexer.source, this._lines[start.line - 1]);
 			if (!invalidOperation) return this.parseInvalid();
@@ -120,7 +120,7 @@ export class ResilientParser extends Parser {
 			// For invalid operation definition, search for next definition on next line
 			const next = findNextLandmark(
 				this._landmarks,
-				this._lexer.token.line + 1
+				this._lexer.token.line + 1,
 			);
 
 			if (next) {
@@ -163,14 +163,14 @@ export class ResilientParser extends Parser {
 			const start = this._lexer.token;
 			const invalidFragment = tryParseFragment(
 				this._lexer.source,
-				this._lines[start.line - 1]
+				this._lines[start.line - 1],
 			);
 			if (!invalidFragment) return this.parseInvalid();
 
 			// For invalid fragment definition, search for next definition on next line
 			const next = findNextLandmark(
 				this._landmarks,
-				this._lexer.token.line + 1
+				this._lexer.token.line + 1,
 			);
 
 			if (next) {
@@ -214,7 +214,7 @@ export class ResilientParser extends Parser {
 			selections: this.zeroToMany(
 				TokenKind.BRACE_L,
 				this.parseSelection,
-				TokenKind.BRACE_R
+				TokenKind.BRACE_R,
 			),
 			loc: this.loc(start),
 		};
@@ -228,7 +228,7 @@ export class ResilientParser extends Parser {
 	zeroToMany<T>(
 		openKind: TokenKindEnum,
 		parseFn: () => T,
-		closeKind: TokenKindEnum
+		closeKind: TokenKindEnum,
 	): Array<T> {
 		this.expectToken(openKind);
 

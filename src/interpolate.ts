@@ -19,7 +19,7 @@ import type {
  */
 export function interpolate(
 	document: ExtendedDocumentNode,
-	reference: ExtendedDocumentNode
+	reference: ExtendedDocumentNode,
 ): ExtendedDocumentNode {
 	const documentOutline = document.sections.filter(isRelevant);
 	const referenceOutline = reference.sections.filter(isRelevant);
@@ -69,14 +69,14 @@ function isRelevant(section: SectionNode): section is RelevantNode {
 
 function findAnonymousOperation(
 	operation: InvalidOperationDefinitionNode,
-	index: number
+	index: number,
 ): (
 	relevant: RelevantNode,
-	index: number
+	index: number,
 ) => relevant is OperationDefinitionNode {
 	return (
 		relevant: RelevantNode,
-		relevantIndex: number
+		relevantIndex: number,
 	): relevant is OperationDefinitionNode => {
 		return (
 			index === relevantIndex &&
@@ -88,7 +88,7 @@ function findAnonymousOperation(
 }
 
 function findNamedOperation(
-	operation: InvalidOperationDefinitionNode
+	operation: InvalidOperationDefinitionNode,
 ): (relevant: RelevantNode) => relevant is OperationDefinitionNode {
 	return (relevant: RelevantNode): relevant is OperationDefinitionNode => {
 		return (
@@ -101,7 +101,7 @@ function findNamedOperation(
 }
 
 function findFragment(
-	fragment: InvalidFragmentDefinitionNode
+	fragment: InvalidFragmentDefinitionNode,
 ): (relevant: RelevantNode) => relevant is FragmentDefinitionNode {
 	return (relevant: RelevantNode): relevant is FragmentDefinitionNode => {
 		return (

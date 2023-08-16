@@ -9,7 +9,7 @@ test("should interpolate single anonymous operation", () => {
 	const interpolated = interpolate(document, reference);
 
 	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(reference.sections[0])
+		withoutLoc(reference.sections[0]),
 	);
 });
 
@@ -19,7 +19,7 @@ test("should interpolate single named operation", () => {
 	const interpolated = interpolate(document, reference);
 
 	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(reference.sections[0])
+		withoutLoc(reference.sections[0]),
 	);
 });
 
@@ -29,7 +29,7 @@ test("should interpolate single named operation", () => {
 	const interpolated = interpolate(document, reference);
 
 	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(reference.sections[0])
+		withoutLoc(reference.sections[0]),
 	);
 });
 
@@ -54,25 +54,25 @@ subscription { g { }
 
 	expect(interpolated.sections.length).toBe(document.sections.length);
 	expect(withoutLoc(interpolated.sections[0])).toEqual(
-		withoutLoc(document.sections[0])
+		withoutLoc(document.sections[0]),
 	);
 	expect(withoutLoc(interpolated.sections[1])).toEqual(
-		withoutLoc(document.sections[1])
+		withoutLoc(document.sections[1]),
 	);
 	expect(withoutLoc(interpolated.sections[2])).toEqual(
-		withoutLoc(reference.sections[2])
+		withoutLoc(reference.sections[2]),
 	);
 	expect(withoutLoc(interpolated.sections[3])).toEqual(
-		withoutLoc(reference.sections[3])
+		withoutLoc(reference.sections[3]),
 	);
 	expect(withoutLoc(interpolated.sections[4])).toEqual(
-		withoutLoc(document.sections[4])
+		withoutLoc(document.sections[4]),
 	);
 	expect(withoutLoc(interpolated.sections[5])).toEqual(
-		withoutLoc(document.sections[5])
+		withoutLoc(document.sections[5]),
 	);
 	expect(withoutLoc(interpolated.sections[6])).toEqual(
-		withoutLoc(reference.sections[6])
+		withoutLoc(reference.sections[6]),
 	);
 });
 

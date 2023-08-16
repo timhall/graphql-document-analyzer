@@ -4,7 +4,7 @@ import { ignored, SectionNode } from "../extended-ast";
 export function insertWhitespace(
 	source: Source,
 	lines: Token[],
-	sections: SectionNode[]
+	sections: SectionNode[],
 ): SectionNode[] {
 	const lastLine = lines.at(-1);
 	if (!lastLine) return sections;
@@ -16,7 +16,7 @@ export function insertWhitespace(
 		lastLine.end,
 		lastLine.line + 1,
 		lastLine.column + (lastLine.value?.length ?? 0),
-		lastLine
+		lastLine,
 	);
 
 	if (!sections.length) {
@@ -54,7 +54,7 @@ export function insertWhitespace(
 function linesBetween(
 	lines: Token[],
 	before: Token,
-	after: Token
+	after: Token,
 ): [Token, Token] | undefined {
 	const startIndex = before.line - 1 + 1;
 	const endIndex = after.line - 1 - 1;

@@ -22,7 +22,7 @@ import { ResilientParser } from "./resilient-parser";
 
 export function analyze(
 	source: string,
-	options?: ParseOptions
+	options?: ParseOptions,
 ): ExtendedDocumentNode {
 	const parser = new ResilientParser(source, options);
 	return parser.parseExtendedDocument();
@@ -77,7 +77,7 @@ const CLOSE = /}\s*$/;
  */
 function parseSections(
 	source: string | Source,
-	options?: ParseOptions
+	options?: ParseOptions,
 ): SectionNode[] {
 	source = typeof source === "string" ? new Source(source) : source;
 
@@ -129,7 +129,7 @@ function parseSections(
 				writeSection(
 					{ kind: "InvalidOperationDefinition", ...operation },
 					line,
-					line
+					line,
 				);
 			} else {
 				// Multi-line operation
@@ -151,7 +151,7 @@ function parseSections(
 				writeSection(
 					{ kind: "InvalidFragmentDefinition", ...fragment },
 					line,
-					line
+					line,
 				);
 			} else {
 				// Multi-line fragment
@@ -177,7 +177,7 @@ function parseSections(
 function tryParseDefinition(
 	source: string | Source,
 	location: Location,
-	options: ParseOptions = {}
+	options: ParseOptions = {},
 ): DefinitionNode | undefined {
 	source = typeof source === "string" ? new Source(source) : source;
 
@@ -210,7 +210,7 @@ const OPEN_OPERATION =
 const OPEN_FRAGMENT = /^\s*fragment\s+(\w+)\s+on\s+(\w+)\s*/;
 
 function isOperation(
-	line: string
+	line: string,
 ): Pick<InvalidOperationDefinitionNode, "operation" | "name"> | false {
 	const match = line.match(OPEN_OPERATION);
 	if (match == null) return false;
@@ -225,7 +225,7 @@ function isOperation(
 }
 
 function isFragment(
-	line: string
+	line: string,
 ): Pick<InvalidFragmentDefinitionNode, "name" | "typeCondition"> | false {
 	const match = line.match(OPEN_FRAGMENT);
 	if (match == null) return false;

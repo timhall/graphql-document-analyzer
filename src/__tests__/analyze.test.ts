@@ -18,7 +18,7 @@ test("should parse comment sections", () => {
 
 	expect(document.sections.length).toBe(1);
 	expect((document.sections[0] as IgnoredNode).value).toBe(
-		"\n# A\n\n# B\n\n# C\n"
+		"\n# A\n\n# B\n\n# C\n",
 	);
 });
 
@@ -54,7 +54,7 @@ query C {
 	expect(document.sections.length).toBe(7);
 	expect(document.sections[3].kind).toBe("OperationDefinition");
 	expect((document.sections[3] as OperationDefinitionNode).name?.value).toBe(
-		"B"
+		"B",
 	);
 });
 
@@ -78,31 +78,31 @@ subscription {
 `);
 
 	expect(
-		(document.sections[1] as InvalidOperationDefinitionNode).operation
+		(document.sections[1] as InvalidOperationDefinitionNode).operation,
 	).toBe("query");
 	expect(
-		(document.sections[1] as InvalidOperationDefinitionNode).name?.value
+		(document.sections[1] as InvalidOperationDefinitionNode).name?.value,
 	).toBe("A");
 
 	expect(
-		(document.sections[3] as InvalidOperationDefinitionNode).operation
+		(document.sections[3] as InvalidOperationDefinitionNode).operation,
 	).toBe("query");
 	expect((document.sections[3] as InvalidOperationDefinitionNode).name).toBe(
-		undefined
+		undefined,
 	);
 
 	expect(
-		(document.sections[5] as InvalidOperationDefinitionNode).operation
+		(document.sections[5] as InvalidOperationDefinitionNode).operation,
 	).toBe("mutation");
 	expect(
-		(document.sections[5] as InvalidOperationDefinitionNode).name?.value
+		(document.sections[5] as InvalidOperationDefinitionNode).name?.value,
 	).toBe("D");
 
 	expect(
-		(document.sections[7] as InvalidOperationDefinitionNode).operation
+		(document.sections[7] as InvalidOperationDefinitionNode).operation,
 	).toBe("subscription");
 	expect((document.sections[7] as InvalidOperationDefinitionNode).name).toBe(
-		undefined
+		undefined,
 	);
 });
 
@@ -114,7 +114,7 @@ fragment F on G {
 `);
 
 	expect(
-		(document.sections[1] as InvalidFragmentDefinitionNode).name.value
+		(document.sections[1] as InvalidFragmentDefinitionNode).name.value,
 	).toBe("F");
 });
 
@@ -129,7 +129,7 @@ query A {
 
 	expect(document.sections.length).toBe(3);
 	expect((document.sections[1] as OperationDefinitionNode).name?.value).toBe(
-		"A"
+		"A",
 	);
 });
 
@@ -138,7 +138,7 @@ test("should analyze single line operation", () => {
 
 	expect(document.sections.length).toBe(1);
 	expect((document.sections[0] as OperationDefinitionNode).name?.value).toBe(
-		"A"
+		"A",
 	);
 });
 
@@ -167,12 +167,12 @@ query C($id: ID!) {
 	expect(document.sections.length).toBe(5);
 	expect(document.sections[1].kind).toBe("OperationDefinition");
 	expect((document.sections[1] as OperationDefinitionNode).name?.value).toBe(
-		"A"
+		"A",
 	);
 
 	expect(document.sections[3].kind).toBe("InvalidOperationDefinition");
 	expect(
-		(document.sections[3] as InvalidOperationDefinitionNode).name?.value
+		(document.sections[3] as InvalidOperationDefinitionNode).name?.value,
 	).toBe("C");
 });
 
@@ -201,6 +201,6 @@ b
 query B {
 c 
 	{d(e: "}"}}
-`
+`,
 	);
 });

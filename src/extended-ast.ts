@@ -27,7 +27,7 @@ export interface ExtendedASTKindToNode {
 }
 
 export function isExtendedNode(
-	node: unknown
+	node: unknown,
 ): node is
 	| ExtendedDocumentNode
 	| InvalidOperationDefinitionNode
@@ -54,7 +54,7 @@ export interface ExtendedDocumentNode {
 }
 
 export function isExtendedDocumentNode(
-	node: unknown
+	node: unknown,
 ): node is ExtendedDocumentNode {
 	return isRecord(node) && node.kind === "ExtendedDocument";
 }
@@ -82,7 +82,7 @@ export function invalidOperationDefinition(
 	operation: OperationTypeNode,
 	name: string | undefined,
 	start: Token,
-	end: Token
+	end: Token,
 ): InvalidOperationDefinitionNode {
 	const loc = new Location(start, end, source);
 
@@ -98,7 +98,7 @@ export function invalidOperationDefinition(
 export function invalidShorthandOperationDefinition(
 	source: Source,
 	start: Token,
-	end: Token
+	end: Token,
 ): InvalidOperationDefinitionNode {
 	const loc = new Location(start, end, source);
 
@@ -123,7 +123,7 @@ export function invalidFragment(
 	name: string,
 	typeCondition: string,
 	start: Token,
-	end: Token
+	end: Token,
 ): InvalidFragmentDefinitionNode {
 	const loc = new Location(start, end, source);
 

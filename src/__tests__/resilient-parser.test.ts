@@ -45,7 +45,7 @@ fragment C on D {
 
 	expect(document.sections[1].kind).toBe("InvalidOperationDefinition");
 	expect((document.sections[1] as InvalidOperationDefinitionNode).value).toBe(
-		"{\na {\nb\n}"
+		"{\na {\nb\n}",
 	);
 
 	expect(document.sections[2].kind).toBe("Ignored");
@@ -53,7 +53,7 @@ fragment C on D {
 
 	expect(document.sections[3].kind).toBe("InvalidOperationDefinition");
 	expect((document.sections[3] as InvalidOperationDefinitionNode).value).toBe(
-		"query A {\t\na {\nb\n}\n}\n# comment\n\n# another\n{"
+		"query A {\t\na {\nb\n}\n}\n# comment\n\n# another\n{",
 	);
 
 	expect(document.sections[4].kind).toBe("Ignored");
@@ -66,7 +66,7 @@ fragment C on D {
 
 	expect(document.sections[7].kind).toBe("InvalidFragmentDefinition");
 	expect((document.sections[7] as IgnoredNode).value).toBe(
-		"fragment A on B {\n}\n}"
+		"fragment A on B {\n}\n}",
 	);
 
 	expect(document.sections[8].kind).toBe("Ignored");
@@ -76,7 +76,7 @@ fragment C on D {
 
 	expect(document.sections[10].kind).toBe("Ignored");
 	expect((document.sections[10] as IgnoredNode).value).toBe(
-		"\n# trailing\n    "
+		"\n# trailing\n    ",
 	);
 });
 
@@ -128,6 +128,6 @@ test("should handle syntax errors", () => {
 	expect(document.sections.length).toBe(1);
 	expect(document.sections[0].kind).toBe("InvalidOperationDefinition");
 	expect((document.sections[0] as InvalidOperationDefinitionNode).value).toBe(
-		source
+		source,
 	);
 });

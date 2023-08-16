@@ -151,7 +151,7 @@ test("should map sections", () => {
 	expect((document.sections[0] as IgnoredNode).value).toBe("# A");
 	expect(result.sections[0].value).toBe("# A (entered) (left)");
 	expect(
-		(document.sections[3] as InvalidFragmentDefinitionNode).name.value
+		(document.sections[3] as InvalidFragmentDefinitionNode).name.value,
 	).toBe("F");
 	expect(result.sections[3].name.value).toBe("InvalidF");
 });

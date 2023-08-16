@@ -16,21 +16,33 @@
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
 	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		}
+	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
-		"build": "tsup src/index.ts --dts --format esm,cjs --target ES2019",
+		"build": "tsup src/index.ts --dts --format esm,cjs --target ES2019 --onSuccess \"node scripts/fix-cjs.js\"",
 		"prepublishOnly": "pnpm build",
 		"test": "vitest",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
 		"@tsconfig/node12": "^1.0.11",
-		"@types/node": "^18.11.2",
+		"@types/node": "^18.17.5",
 		"graphql": "^15.8.0",
-		"prettier": "^2.8.4",
-		"tsup": "^6.3.0",
-		"typescript": "^4.8.4",
-		"vitest": "^0.29.2"
+		"prettier": "^3.0.2",
+		"tsup": "^7.2.0",
+		"typescript": "^5.1.6",
+		"vitest": "^0.34.1"
 	},
 	"peerDependencies": {
 		"graphql": "^15"
