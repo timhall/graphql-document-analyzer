@@ -4,11 +4,11 @@ import {
 	DocumentNode,
 	FieldNode,
 	Kind,
-	print as graphqlPrint,
 	visit,
 } from "graphql";
 import type { ExtendedDocumentNode } from "./extended-ast";
 import { isExtendedDocumentNode } from "./extended-ast";
+import { print as graphqlPrint } from "./graphql-js/language/printer";
 import {
 	ensureTrailingNewline,
 	trimTrailingNewlines,
