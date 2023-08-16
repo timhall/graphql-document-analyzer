@@ -5,6 +5,7 @@ import { printBlockString } from "./blockString";
 import { printString } from "./printString";
 import type { ASTReducer } from "./visitor";
 import { visit } from "graphql";
+import { isNode } from "graphql/language/ast.js";
 
 /**
  * Converts an AST into a string, using one set of reasonable
@@ -185,9 +186,26 @@ const printDocASTReducer: ASTReducer<string> = {
 		},
 	},
 	ObjectValue: {
-		leave: ({ fields }) => {
+		leave: ({ fields }, key, parent, path, ancestors) => {
+			const depth = [...ancestors, parent].filter(
+				(ancestor) => isNode(ancestor) && ancestor.kind === "ObjectValue",
+			).length;
+			const parentKey =
+				isNode(parent) && parent.kind === "ObjectField"
+					? parent.name.value
+					: undefined;
+
 			const fieldsLine = "{ " + join(fields, ", ") + " }";
-			return fieldsLine.length > MAX_LINE_LENGTH ? block(fields) : fieldsLine;
+			const isWrapped = fieldsLine.indexOf("\n") >= 0;
+
+			const TOP_LEVEL_DEPTH = 2;
+			const INDENT = 2;
+			const approximateInset =
+				(depth + TOP_LEVEL_DEPTH) * INDENT + (parentKey ? parentKey.length : 0);
+
+			return isWrapped || approximateInset + fieldsLine.length > MAX_LINE_LENGTH
+				? block(fields)
+				: fieldsLine;
 		},
 	},
 	ObjectField: { leave: ({ name, value }) => name + ": " + value },
