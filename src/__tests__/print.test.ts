@@ -57,3 +57,41 @@ test("should print document", () => {
 
 	expect(print(document)).toEqual(`${source}\n`);
 });
+
+test("should wrap variables and arguments, if needed", () => {
+	const source = `query A($b: Int, $c: Float) {
+	d(e: "f", g: "h") {
+		i
+	}
+}
+
+query J($kReallyReallyReallyReallyLong: Boolean!, $lReallyReallyReallyReallyLong: ID!) {
+	m(n: "................................", o: {p: { q: { r: "..............................", s: "........................" } } }) {
+		s
+	}
+}`;
+	const document = parse(source);
+
+	expect(print(document)).toMatchInlineSnapshot(`
+		"query A($b: Int, $c: Float) {
+		  d(e: \\"f\\", g: \\"h\\") {
+		    i
+		  }
+		}
+
+		query J(
+		  $kReallyReallyReallyReallyLong: Boolean!
+		  $lReallyReallyReallyReallyLong: ID!
+		) {
+		  m(
+		    n: \\"................................\\"
+		    o: {
+		      p: { q: { r: \\"..............................\\", s: \\"........................\\" } }
+		    }
+		  ) {
+		    s
+		  }
+		}
+		"
+	`);
+});

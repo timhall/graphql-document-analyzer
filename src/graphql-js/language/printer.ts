@@ -28,11 +28,37 @@ const printDocASTReducer: ASTReducer<string> = {
 
 	OperationDefinition: {
 		leave(node) {
-			const varDefs = wrap("(", join(node.variableDefinitions, ", "), ")");
-			const prefix = join(
+			const inlineVarDefs = wrap(
+				"(",
+				join(node.variableDefinitions, ", "),
+				")",
+			);
+			const inlinePrefix = join(
 				[
 					node.operation,
-					join([node.name, varDefs]),
+					join([node.name, inlineVarDefs]),
+					join(node.directives, " "),
+				],
+				" ",
+			);
+
+			// 2 = " {"
+			if (inlinePrefix.length + 2 <= MAX_LINE_LENGTH) {
+				// Anonymous queries with no directives or variable definitions can use
+				// the query short form.
+				return (
+					(inlinePrefix === "query" ? "" : inlinePrefix + " ") +
+					node.selectionSet
+				);
+			}
+
+			const blockVarDefs = node.variableDefinitions
+				? block(node.variableDefinitions, "(", ")", "")
+				: "";
+			const blockPrefix = join(
+				[
+					node.operation,
+					join([node.name, blockVarDefs]),
 					join(node.directives, " "),
 				],
 				" ",
@@ -40,7 +66,7 @@ const printDocASTReducer: ASTReducer<string> = {
 
 			// Anonymous queries with no directives or variable definitions can use
 			// the query short form.
-			return (prefix === "query" ? "" : prefix + " ") + node.selectionSet;
+			return blockPrefix + " " + node.selectionSet;
 		},
 	},
 
@@ -366,8 +392,13 @@ function join(
 /**
  * Given array, print each item on its own line, wrapped in an indented `{ }` block.
  */
-function block(array: Maybe<ReadonlyArray<string | undefined>>): string {
-	return wrap("{\n", indent(join(array, "\n")), "\n}");
+function block(
+	array: Maybe<ReadonlyArray<string | undefined>>,
+	start = "{",
+	end = "}",
+	separator = "",
+): string {
+	return wrap(`${start}\n`, indent(join(array, `${separator}\n`)), `\n${end}`);
 }
 
 /**
